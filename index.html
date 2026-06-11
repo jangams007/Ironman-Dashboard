@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sri's Ironman Maryland 2026 — Training Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2128;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #f97316;
+    --accent2: #38bdf8;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --purple: #a371f7;
+    --swim: #38bdf8;
+    --bike: #f97316;
+    --run: #3fb950;
+    --strength: #a371f7;
+    --hiit: #f85149;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.5; }
+
+  .header {
+    background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1f2e 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 24px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+  }
+  .header-left h1 { font-size: 22px; font-weight: 700; color: var(--accent); letter-spacing: -0.3px; }
+  .header-left p { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .countdown-box {
+    background: linear-gradient(135deg, var(--accent) 0%, #ea580c 100%);
+    border-radius: 12px; padding: 12px 20px; text-align: center; min-width: 160px;
+  }
+  .countdown-box .days { font-size: 36px; font-weight: 800; color: white; line-height: 1; }
+  .countdown-box .label { font-size: 11px; color: rgba(255,255,255,0.85); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
+
+  .container { max-width: 1400px; margin: 0 auto; padding: 20px 24px; }
+
+  /* KPI Cards */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .kpi .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  .kpi .kpi-value { font-size: 26px; font-weight: 700; margin: 4px 0 2px; }
+  .kpi .kpi-sub { font-size: 11px; color: var(--muted); }
+  .kpi.recovery .kpi-value { color: #d29922; }
+  .kpi.hrv .kpi-value { color: var(--accent2); }
+  .kpi.rhr .kpi-value { color: var(--green); }
+  .kpi.strain .kpi-value { color: var(--accent); }
+  .kpi.sleep .kpi-value { color: var(--purple); }
+  .kpi.debt .kpi-value { color: var(--red); }
+  .kpi.calories .kpi-value { color: #fb923c; }
+  .kpi.nextup .kpi-value { font-size: 15px; line-height: 1.3; color: var(--accent2); padding-top: 4px; }
+
+  /* Alert Banner */
+  .alert-banner {
+    background: rgba(248, 81, 73, 0.12); border: 1px solid rgba(248, 81, 73, 0.35);
+    border-radius: 8px; padding: 10px 16px; margin-bottom: 20px;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .alert-banner .icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .alert-banner p { color: var(--text); font-size: 13px; }
+  .alert-banner strong { color: var(--red); }
+
+  .tip-banner {
+    background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 8px; padding: 10px 16px; margin-bottom: 20px;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .tip-banner p { color: var(--text); font-size: 13px; }
+  .tip-banner strong { color: var(--accent2); }
+
+  /* Grid Layout */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  @media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .card h2 span.badge {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    font-size: 11px; font-weight: 500; color: var(--muted); padding: 2px 8px;
+  }
+
+  /* Chart containers */
+  .chart-wrap { position: relative; height: 200px; }
+  .chart-wrap-tall { position: relative; height: 260px; }
+
+  /* Training Plan Table */
+  .phase-tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .phase-tab {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 5px 14px; font-size: 12px; color: var(--muted); cursor: pointer; transition: all 0.15s;
+  }
+  .phase-tab.active { background: var(--accent); border-color: var(--accent); color: white; font-weight: 600; }
+
+  /* Weekly schedule grid */
+  .week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .day-card {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 8px; text-align: center; transition: border-color 0.15s;
+  }
+  .day-card:hover { border-color: var(--accent); }
+  .day-card .day-name { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px; margin-bottom: 6px; }
+  .day-card .day-today { border-color: var(--accent2) !important; }
+  .session-pill {
+    display: block; border-radius: 5px; padding: 4px 6px; font-size: 10px; font-weight: 600;
+    margin-bottom: 3px; text-align: left; line-height: 1.3;
+  }
+  .session-pill.swim { background: rgba(56, 189, 248, 0.15); color: var(--swim); border: 1px solid rgba(56, 189, 248, 0.3); }
+  .session-pill.bike { background: rgba(249, 115, 22, 0.15); color: var(--bike); border: 1px solid rgba(249, 115, 22, 0.3); }
+  .session-pill.run  { background: rgba(63, 185, 80, 0.15); color: var(--run); border: 1px solid rgba(63, 185, 80, 0.3); }
+  .session-pill.strength { background: rgba(163, 113, 247, 0.15); color: var(--strength); border: 1px solid rgba(163, 113, 247, 0.3); }
+  .session-pill.hiit { background: rgba(248, 81, 73, 0.15); color: var(--hiit); border: 1px solid rgba(248, 81, 73, 0.3); }
+  .session-pill.rest { background: rgba(139, 148, 158, 0.08); color: var(--muted); border: 1px solid var(--border); }
+  .session-pill.brick { background: rgba(249, 115, 22, 0.12); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); }
+
+  .day-card .volume { font-size: 9px; color: var(--muted); margin-top: 5px; }
+
+  /* Recent activity list */
+  .activity-list { display: flex; flex-direction: column; gap: 6px; }
+  .activity-row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px;
+  }
+  .activity-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .activity-row .act-name { font-weight: 600; font-size: 13px; flex: 1; }
+  .activity-row .act-date { font-size: 11px; color: var(--muted); }
+  .activity-row .act-stat { font-size: 12px; color: var(--muted); text-align: right; }
+  .activity-row .act-strain { font-size: 13px; font-weight: 700; color: var(--accent); min-width: 28px; text-align: right; }
+
+  /* Sleep bars */
+  .sleep-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .sleep-bar-bg { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .sleep-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+  .sleep-label { font-size: 12px; min-width: 35px; }
+  .sleep-val { font-size: 12px; color: var(--muted); min-width: 55px; text-align: right; }
+
+  /* Phase timeline */
+  .phase-timeline { display: flex; gap: 0; margin-bottom: 16px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+  .phase-block { flex: 1; padding: 10px 12px; text-align: center; }
+  .phase-block .p-name { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .phase-block .p-dates { font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .phase-block .p-weeks { font-size: 10px; color: rgba(255,255,255,0.5); }
+  .phase-1 { background: rgba(56, 189, 248, 0.25); border-right: 1px solid var(--border); }
+  .phase-1 .p-name { color: var(--accent2); }
+  .phase-2 { background: rgba(249, 115, 22, 0.2); border-right: 1px solid var(--border); }
+  .phase-2 .p-name { color: var(--accent); }
+  .phase-3 { background: rgba(248, 81, 73, 0.2); border-right: 1px solid var(--border); }
+  .phase-3 .p-name { color: var(--red); }
+  .phase-4 { background: rgba(63, 185, 80, 0.2); }
+  .phase-4 .p-name { color: var(--green); }
+
+  /* Phase content */
+  .phase-content { display: none; }
+  .phase-content.visible { display: block; }
+
+  /* Training detail table */
+  .detail-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .detail-table th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+  .detail-table td { padding: 7px 8px; border-bottom: 1px solid rgba(48, 54, 61, 0.5); vertical-align: top; }
+  .detail-table tr:last-child td { border-bottom: none; }
+  .detail-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .pill {
+    display: inline-block; border-radius: 4px; font-size: 10px; font-weight: 600; padding: 2px 7px;
+  }
+  .pill.swim { background: rgba(56,189,248,.15); color: var(--swim); }
+  .pill.bike { background: rgba(249,115,22,.15); color: var(--bike); }
+  .pill.run { background: rgba(63,185,80,.15); color: var(--run); }
+  .pill.str { background: rgba(163,113,247,.15); color: var(--strength); }
+  .pill.hiit { background: rgba(248,81,73,.15); color: var(--hiit); }
+  .pill.rest { background: rgba(139,148,158,.1); color: var(--muted); }
+  .pill.brick { background: rgba(249,115,22,.12); color: #fb923c; }
+
+  /* Tracking fields */
+  .field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+  .field-card {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;
+  }
+  .field-card .f-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .field-card .f-why { font-size: 11px; color: var(--muted); line-height: 1.5; }
+  .field-card .f-source { display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; padding: 2px 7px; border-radius: 4px; }
+  .src-whoop { background: rgba(248,81,73,.15); color: var(--red); }
+  .src-manual { background: rgba(249,115,22,.15); color: var(--accent); }
+  .src-garmin { background: rgba(56,189,248,.15); color: var(--accent2); }
+
+  /* HR Zones legend */
+  .zone-legend { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+  .zone-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+  .zone-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+  .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 10px; }
+
+  /* Targets */
+  .targets-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .target-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
+  .target-card .t-icon { font-size: 24px; margin-bottom: 4px; }
+  .target-card .t-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; }
+  .target-card .t-target { font-size: 17px; font-weight: 700; margin: 4px 0 2px; }
+  .target-card .t-current { font-size: 11px; color: var(--muted); }
+  .target-card.swim .t-target { color: var(--swim); }
+  .target-card.bike .t-target { color: var(--bike); }
+  .target-card.run .t-target { color: var(--run); }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  footer { text-align: center; color: var(--muted); font-size: 11px; padding: 20px 24px; border-top: 1px solid var(--border); }
+
+  /* Week 1 log panel */
+  .log-entry { display: grid; grid-template-columns: 90px 140px 1fr repeat(6, 80px); gap: 1px; font-size: 12px; }
+  .log-cell { background: var(--surface2); border: 1px solid var(--border); padding: 7px 10px; display: flex; align-items: center; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <h1>🏊 Sri's Ironman Maryland 2026</h1>
+    <p>Coached training dashboard · Powered by Whoop data · Updated June 7, 2026</p>
+  </div>
+  <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+    <div style="text-align:right;">
+      <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;">Race Day</div>
+      <div style="font-size:14px; font-weight:600;">Oct 4, 2026 · Cambridge, MD</div>
+      <div style="font-size:11px; color:var(--muted);">3.86km swim · 180km bike · 42.2km run</div>
+    </div>
+    <div class="countdown-box">
+      <div class="days" id="countdown-days">119</div>
+      <div class="label">Days to Race</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- LATEST ACTIVITY ALERT -->
+  <div class="tip-banner" style="border-color:rgba(63,185,80,0.4); background:rgba(63,185,80,0.08);">
+    <div style="font-size:18px; flex-shrink:0;">🟢</div>
+    <p><strong>Week 1 Update (Jun 6–7):</strong> Sat — Strength 66 min, Strain 13, Recovery 63%. Sun — First Long Ride 27km, 116 min, Strain 16.6, Recovery 87% ↑, HRV 40ms ↑ (above baseline!). Great start — recovery bounced back strongly after the ride. <strong>Coach flag:</strong> Avg HR 147 on ride is top of Z2 — aim for 120–140 on next Saturday's ride.</p>
+  </div>
+  <!-- SLEEP ALERT -->
+  <div class="alert-banner">
+    <div class="icon">⚠️</div>
+    <p><strong>Sleep Deficit Ongoing:</strong> Saturday 5.7 hrs · Sunday 6.5 hrs — still well below your 9.3–9.8 hr need. Despite strong recovery scores, chronic sleep debt will blunt adaptation as training volume increases in Phase 2. Target 8.5 hrs minimum this week.</p>
+  </div>
+  <div class="tip-banner">
+    <div style="font-size:18px; flex-shrink:0;">💡</div>
+    <p><strong>Coach's Read:</strong> Strong swim base (3×/week, avg 56 min). First long ride done ✅ — 27km is a solid Week 1 start. Build to 60km by Week 3. Your HRV at 40ms today is your best reading in 30 days — capitalise with a strong swim session Monday. Cycling remains your biggest volume gap.</p>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div class="kpi recovery" style="border-color:rgba(63,185,80,0.5);">
+      <div class="kpi-label">Recovery Score</div>
+      <div class="kpi-value" style="color:var(--green);">87%</div>
+      <div class="kpi-sub">Sun Jun 7 🟢 Green · 90-day avg: 58%</div>
+    </div>
+    <div class="kpi hrv" style="border-color:rgba(56,189,248,0.5);">
+      <div class="kpi-label">HRV</div>
+      <div class="kpi-value">40 ms</div>
+      <div class="kpi-sub">↑ Above baseline · 90-day avg: 34 ms</div>
+    </div>
+    <div class="kpi rhr">
+      <div class="kpi-label">Resting HR</div>
+      <div class="kpi-value">63 bpm</div>
+      <div class="kpi-sub">Stable · 90-day avg: 64.6</div>
+    </div>
+    <div class="kpi strain">
+      <div class="kpi-label">Long Ride Strain</div>
+      <div class="kpi-value" style="color:var(--red);">16.6</div>
+      <div class="kpi-sub">Sun · ⚠️ Above Z2 plan target (12–14)</div>
+    </div>
+    <div class="kpi sleep">
+      <div class="kpi-label">Sleep Last Night</div>
+      <div class="kpi-value">6.5 hrs</div>
+      <div class="kpi-sub">Sun · Need 9.8 hrs · Deficit 3.3 hrs</div>
+    </div>
+    <div class="kpi debt">
+      <div class="kpi-label">Long Ride Calories</div>
+      <div class="kpi-value" style="color:#fb923c;">1,276</div>
+      <div class="kpi-sub">27 km · 116 min · RPE 8</div>
+    </div>
+    <div class="kpi calories">
+      <div class="kpi-label">Strength Cal (Sat)</div>
+      <div class="kpi-value">353</div>
+      <div class="kpi-sub">66 min · HR 117/153 · Strain 13</div>
+    </div>
+    <div class="kpi nextup" style="border-color:rgba(56,189,248,0.6);">
+      <div class="kpi-label">Next Session — Mon Jun 8</div>
+      <div class="kpi-value">🏊 Swim — Z2<br><span style="font-size:12px; color:var(--green);">Recovery 87% 🟢 — Train as planned</span></div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW -->
+  <div class="grid-2">
+    <div class="card">
+      <h2>📊 Recovery & HRV — Last 30 Days</h2>
+      <div class="chart-wrap">
+        <canvas id="recoveryChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h2>🔥 Strain & Activity — Last 30 Days</h2>
+      <div class="chart-wrap">
+        <canvas id="strainChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLEEP + ACTIVITY -->
+  <div class="grid-2">
+    <div class="card">
+      <h2>😴 Sleep: Captured vs Required</h2>
+      <div class="chart-wrap">
+        <canvas id="sleepChart"></canvas>
+      </div>
+      <div style="margin-top:12px;">
+        <div class="sleep-row">
+          <div class="sleep-label" style="color:var(--purple);">Got</div>
+          <div class="sleep-bar-bg"><div class="sleep-bar-fill" style="width:59%;background:var(--purple);"></div></div>
+          <div class="sleep-val">6.2 hrs avg</div>
+        </div>
+        <div class="sleep-row">
+          <div class="sleep-label" style="color:var(--red);">Need</div>
+          <div class="sleep-bar-bg"><div class="sleep-bar-fill" style="width:100%;background:var(--red);opacity:0.6;"></div></div>
+          <div class="sleep-val">9.5 hrs avg</div>
+        </div>
+        <div style="font-size:11px; color:var(--muted); margin-top:8px;">⚡ Target 8.5 hrs minimum during heavy training weeks. Sleep is when your body adapts to training load.</div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>🏃 Recent Activities <span class="badge">Last 30 Days</span></h2>
+      <div class="activity-list" id="activityList"></div>
+    </div>
+  </div>
+
+  <!-- WEEK 1 LOG -->
+  <div class="card" style="border-color:rgba(63,185,80,0.35);">
+    <h2>📓 Week 1 Training Log — Jun 6–12 <span class="badge">Phase 1 · Base</span></h2>
+    <table style="width:100%; border-collapse:collapse; font-size:12px;">
+      <thead>
+        <tr>
+          <th style="padding:7px 10px; background:#1c2128; color:#8b949e; font-size:10px; text-transform:uppercase; letter-spacing:.5px; border:1px solid #30363d; text-align:left;">Date</th>
+          <th style="padding:7px 10px; background:#1c2128; color:#8b949e; font-size:10px; text-transform:uppercase; letter-spacing:.5px; border:1px solid #30363d; text-align:left;">Activity</th>
+          <th style="padding:7px 10px; background:#1c2128; color:#8b949e; font-size:10px; text-transform:uppercase; letter-spacing:.5px; border:1px solid #30363d; text-align:center;">Duration</th>
+          <th style="padding:7px 10px; background:#1c2128; color:#8b949e; font-size:10px; text-transform:uppercase; letter-spacing:.5px; border:1px solid #30363d; text-align:center;">Distance</th>
+          <th style="padding:7px 10px; background:#1c2128; color:#8b949e; font-size:10px; text-transform:uppercase; letter-spacing:.5px; border:1px solid #30363d; text-align:center;">Avg/Max HR</th>
+          <th style="padding:7px 10px; background:#1c2128; color:#8b949e; font-size:10px; text-transform:uppercase; letter-spacing:.5px; border:1px solid #30363d; text-align:center;">Strain</th>
+          <th style="padding:7px 10px; background:#1c2128; color:#8b949e; font-size:10px; text-transform:uppercase; letter-spacing:.5px; border:1px solid #30363d; text-align:center;">Recovery / HRV</th>
+          <th style="padding:7px 10px; background:#1c2128; color:#8b949e; font-size:10px; text-transform:uppercase; letter-spacing:.5px; border:1px solid #30363d; text-align:center;">Sleep Got / Need</th>
+          <th style="padding:7px 10px; background:#1c2128; color:#8b949e; font-size:10px; text-transform:uppercase; letter-spacing:.5px; border:1px solid #30363d; text-align:center;">Cal</th>
+          <th style="padding:7px 10px; background:#1c2128; color:#8b949e; font-size:10px; text-transform:uppercase; letter-spacing:.5px; border:1px solid #30363d; text-align:center;">RPE</th>
+          <th style="padding:7px 10px; background:#1c2128; color:#8b949e; font-size:10px; text-transform:uppercase; letter-spacing:.5px; border:1px solid #30363d; text-align:center;">Zone</th>
+          <th style="padding:7px 10px; background:#1c2128; color:#8b949e; font-size:10px; text-transform:uppercase; letter-spacing:.5px; border:1px solid #30363d; text-align:center;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding:8px 10px; border:1px solid #30363d; color:#8b949e; font-size:11px;">Sat Jun 6</td>
+          <td style="padding:8px 10px; border:1px solid #30363d;"><span style="background:rgba(163,113,247,.15); color:#a371f7; font-weight:600; font-size:11px; padding:2px 8px; border-radius:4px;">💪 Strength</span></td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center; color:#e6edf3;">66 min</td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center; color:#8b949e;">—</td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center; color:#f85149;">117 / 153</td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center; color:#f97316; font-weight:700;">13.0</td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center;"><span style="color:#d29922;">63%</span> / <span style="color:#38bdf8;">33ms</span></td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center;"><span style="color:#a371f7;">5.7h</span> / <span style="color:#f85149;">9.3h</span></td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center; color:#fb923c;">353</td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center; color:#e6edf3;">6</td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center;"><span style="background:rgba(26,71,49,.6); color:#6ee7b7; font-size:10px; font-weight:700; padding:2px 7px; border-radius:4px;">Z2</span></td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center;"><span style="color:#3fb950;">✅ Done</span></td>
+        </tr>
+        <tr>
+          <td style="padding:8px 10px; border:1px solid #30363d; color:#8b949e; font-size:11px;">Sun Jun 7</td>
+          <td style="padding:8px 10px; border:1px solid #30363d;"><span style="background:rgba(249,115,22,.15); color:#f97316; font-weight:600; font-size:11px; padding:2px 8px; border-radius:4px;">🚴 Long Ride</span></td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center; color:#e6edf3;">116 min</td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center; color:#f97316; font-weight:600;">27 km</td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center;"><span style="color:#f85149;">147</span> / <span style="color:#f85149;">163</span> <span style="color:#d29922; font-size:10px;">⚠️ Z3</span></td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center;"><span style="color:#f85149; font-weight:700;">16.6</span> <span style="font-size:9px; color:#8b949e;">↑high</span></td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center;"><span style="color:#3fb950; font-weight:700;">87%</span> / <span style="color:#38bdf8; font-weight:700;">40ms ↑</span></td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center;"><span style="color:#a371f7;">6.5h</span> / <span style="color:#f85149;">9.8h</span></td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center; color:#fb923c;">1,276</td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center; color:#e6edf3;">8</td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center;"><span style="background:rgba(74,53,0,.6); color:#fcd34d; font-size:10px; font-weight:700; padding:2px 7px; border-radius:4px;">Z2-Z3</span></td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center;"><span style="color:#3fb950;">✅ Done</span></td>
+        </tr>
+        <tr>
+          <td style="padding:8px 10px; border:1px solid #30363d; color:#8b949e; font-size:11px;">Mon Jun 8</td>
+          <td style="padding:8px 10px; border:1px solid #30363d;"><span style="background:rgba(56,189,248,.12); color:#38bdf8; font-weight:600; font-size:11px; padding:2px 8px; border-radius:4px;">🏊 Swim</span></td>
+          <td colspan="9" style="padding:8px 10px; border:1px solid #30363d; color:#8b949e; font-size:11px; font-style:italic;">Planned — 2,500m endurance · Z2 · 55 min · Recovery 87% 🟢 — go for it!</td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center; color:#8b949e;">⏳</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 10px; border:1px solid #30363d; color:#8b949e; font-size:11px;">Tue Jun 9</td>
+          <td style="padding:8px 10px; border:1px solid #30363d;"><span style="background:rgba(163,113,247,.12); color:#a371f7; font-weight:600; font-size:11px; padding:2px 8px; border-radius:4px;">💪 Strength + Run</span></td>
+          <td colspan="9" style="padding:8px 10px; border:1px solid #30363d; color:#8b949e; font-size:11px; font-style:italic;">Planned — 45 min strength + 30 min Z2 run · Keep run HR under 145 bpm</td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center; color:#8b949e;">⏳</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 10px; border:1px solid #30363d; color:#8b949e; font-size:11px;">Wed Jun 10</td>
+          <td style="padding:8px 10px; border:1px solid #30363d;"><span style="background:rgba(56,189,248,.12); color:#38bdf8; font-weight:600; font-size:11px; padding:2px 8px; border-radius:4px;">🏊 Swim + 🚴 Bike</span></td>
+          <td colspan="9" style="padding:8px 10px; border:1px solid #30363d; color:#8b949e; font-size:11px; font-style:italic;">Planned — 2,000m swim + 45 min easy spin · Z2 only</td>
+          <td style="padding:8px 10px; border:1px solid #30363d; text-align:center; color:#8b949e;">⏳</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:10px; padding:10px 14px; background:#1c2128; border-radius:8px; font-size:12px; color:#8b949e;">
+      🏁 <strong style="color:#e6edf3;">Week 1 Progress:</strong> 2/7 sessions logged · <strong style="color:#3fb950;">Recovery trending up ↑</strong> · <strong style="color:#d29922;">Sleep debt ongoing ⚠️</strong> · <strong style="color:#f97316;">Bike HR slightly high — target Z2 (120–140) next ride</strong>
+    </div>
+  </div>
+
+  <!-- PHASE TIMELINE -->
+  <div class="card">
+    <h2>📅 17-Week Training Plan — Ironman Maryland</h2>
+    <div class="phase-timeline">
+      <div class="phase-block phase-1">
+        <div class="p-name">Phase 1 · Base</div>
+        <div class="p-dates">Jun 6 – Jul 3</div>
+        <div class="p-weeks">4 Weeks</div>
+      </div>
+      <div class="phase-block phase-2">
+        <div class="p-name">Phase 2 · Build</div>
+        <div class="p-dates">Jul 4 – Aug 14</div>
+        <div class="p-weeks">6 Weeks</div>
+      </div>
+      <div class="phase-block phase-3">
+        <div class="p-name">Phase 3 · Peak</div>
+        <div class="p-dates">Aug 15 – Sep 11</div>
+        <div class="p-weeks">4 Weeks</div>
+      </div>
+      <div class="phase-block phase-4">
+        <div class="p-name">Phase 4 · Taper</div>
+        <div class="p-dates">Sep 12 – Oct 4</div>
+        <div class="p-weeks">3 Weeks</div>
+      </div>
+    </div>
+
+    <!-- Phase selector tabs -->
+    <div class="phase-tabs">
+      <div class="phase-tab active" onclick="showPhase(1)">Phase 1: Base</div>
+      <div class="phase-tab" onclick="showPhase(2)">Phase 2: Build</div>
+      <div class="phase-tab" onclick="showPhase(3)">Phase 3: Peak</div>
+      <div class="phase-tab" onclick="showPhase(4)">Phase 4: Taper</div>
+    </div>
+
+    <!-- PHASE 1 -->
+    <div class="phase-content visible" id="phase-1">
+      <div style="color:var(--accent2); font-size:13px; font-weight:600; margin-bottom:10px;">Goal: Build aerobic base, establish bike routine, lock in run form · Strain target: 10–13</div>
+      <table class="detail-table">
+        <thead><tr><th>Day</th><th>Session</th><th>Volume / Intensity</th><th>Focus</th><th>Strain Target</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Monday</strong></td><td><span class="pill swim">Swim</span></td><td>2,500m · 55 min</td><td>Technique drills + steady aerobic. Catch-up drill, pull sets, 200m repeats.</td><td>11–13</td></tr>
+          <tr><td><strong>Tuesday</strong></td><td><span class="pill str">Strength</span> + <span class="pill run">Run</span></td><td>45 min strength + 30 min run</td><td>Compound lifts (squat, deadlift, press). Easy Z2 run at 145 bpm or below.</td><td>10–12</td></tr>
+          <tr><td><strong>Wednesday</strong></td><td><span class="pill swim">Swim</span> + <span class="pill bike">Bike</span></td><td>2,000m swim + 45 min bike</td><td>Swim: speed intervals. Bike: easy spin 110–130W, Z2 only. Build saddle time.</td><td>11–13</td></tr>
+          <tr><td><strong>Thursday</strong></td><td><span class="pill str">Strength</span> + <span class="pill run">Run</span></td><td>40 min strength + 35 min run</td><td>Upper body + core focus. Run: tempo 20 min at lactate threshold.</td><td>10–12</td></tr>
+          <tr><td><strong>Friday</strong></td><td><span class="pill swim">Swim</span></td><td>2,500m · 60 min</td><td>Long set. 10×200m with 20s rest. Build endurance base.</td><td>12–14</td></tr>
+          <tr><td><strong>Saturday</strong></td><td><span class="pill bike">Long Bike</span></td><td>60–75 km · 2.5 hrs</td><td>Steady Z2 ride. Practice nutrition strategy. No HR above Z3.</td><td>12–14</td></tr>
+          <tr><td><strong>Sunday</strong></td><td><span class="pill rest">Light / Recovery</span></td><td>30 min walk or yoga</td><td>Active recovery. Focus on sleep (target 9+ hrs tonight). Foam roll.</td><td>3–5</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:12px; font-size:12px; color:var(--muted);">Weekly swim volume: ~7,000m · Weekly bike: ~75km · Weekly run: ~12km · HIIT: none (building base)</div>
+    </div>
+
+    <!-- PHASE 2 -->
+    <div class="phase-content" id="phase-2">
+      <div style="color:var(--accent); font-size:13px; font-weight:600; margin-bottom:10px;">Goal: Extend bike to 120km, add brick workouts, run off the bike, introduce HIIT · Strain target: 13–16</div>
+      <table class="detail-table">
+        <thead><tr><th>Day</th><th>Session</th><th>Volume / Intensity</th><th>Focus</th><th>Strain Target</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Monday</strong></td><td><span class="pill swim">Swim</span></td><td>3,000m · 65 min</td><td>Open water simulation sets. 6×500m with 30s rest. Race-pace 50m sprints.</td><td>13–15</td></tr>
+          <tr><td><strong>Tuesday</strong></td><td><span class="pill str">Strength</span> + <span class="pill run">Run</span></td><td>45 min strength + 45 min run</td><td>Power-based lifts. Run: 30 min Z2 + 10 min Z3 tempo. Total 45 min.</td><td>12–14</td></tr>
+          <tr><td><strong>Wednesday</strong></td><td><span class="pill swim">Swim</span> + <span class="pill brick">Brick</span></td><td>2,000m + 30km bike + 15 min run</td><td>Practice T2 transition. Run immediately off bike — legs will feel heavy, this is normal.</td><td>14–16</td></tr>
+          <tr><td><strong>Thursday</strong></td><td><span class="pill hiit">HIIT</span> + <span class="pill str">Core</span></td><td>30 min HIIT + 20 min core</td><td>Tabata intervals. Max HR efforts. Build power for race day. Core: plank series, dead bugs.</td><td>13–16</td></tr>
+          <tr><td><strong>Friday</strong></td><td><span class="pill swim">Swim</span></td><td>3,500m · 75 min</td><td>Long endurance swim. Simulate race start. 1000m TT effort, record pace.</td><td>13–15</td></tr>
+          <tr><td><strong>Saturday</strong></td><td><span class="pill bike">Long Bike</span> + <span class="pill run">Run</span></td><td>100–120km bike + 5km run</td><td>Key session. Nutrition: 60–80g carbs/hr. Run off bike Z2 only. Total 4–5 hrs.</td><td>15–18</td></tr>
+          <tr><td><strong>Sunday</strong></td><td><span class="pill rest">Light Run</span></td><td>45 min easy run</td><td>Z1–Z2 only. Recovery run, HR under 140. If recovery &lt;50%, swap for walk.</td><td>6–9</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:12px; font-size:12px; color:var(--muted);">Weekly swim: ~8,500m · Weekly bike: ~150km · Weekly run: ~22km · HIIT: 1 session/week</div>
+    </div>
+
+    <!-- PHASE 3 -->
+    <div class="phase-content" id="phase-3">
+      <div style="color:var(--red); font-size:13px; font-weight:600; margin-bottom:10px;">Goal: Race simulation, peak volume, 160km bike, 30km run · Strain target: 15–18 · Sleep 9 hrs minimum!</div>
+      <table class="detail-table">
+        <thead><tr><th>Day</th><th>Session</th><th>Volume / Intensity</th><th>Focus</th><th>Strain Target</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Monday</strong></td><td><span class="pill swim">Swim</span></td><td>3,800m · 80 min</td><td>Race distance simulation. Full 3.86km unbroken. Record time — aim under 90 min.</td><td>14–16</td></tr>
+          <tr><td><strong>Tuesday</strong></td><td><span class="pill str">Strength</span> + <span class="pill run">Run</span></td><td>45 min strength + 60 min run</td><td>Reduce strength to maintenance loads. Run: 45 min Z2 + 15 min Z3.</td><td>14–16</td></tr>
+          <tr><td><strong>Wednesday</strong></td><td><span class="pill swim">Swim</span> + <span class="pill brick">Brick</span></td><td>3,000m + 60km bike + 20 min run</td><td>Long brick. Practice all race nutrition. Use race-day gear. Note pain points.</td><td>16–18</td></tr>
+          <tr><td><strong>Thursday</strong></td><td><span class="pill hiit">HIIT</span></td><td>40 min HIIT</td><td>High-intensity intervals on bike (Zwift/trainer). 5×4 min at VO2 max with 3 min recovery.</td><td>15–17</td></tr>
+          <tr><td><strong>Friday</strong></td><td><span class="pill swim">Swim</span></td><td>3,000m · 65 min</td><td>Active recovery swim. Moderate pace, focus on form and breathing. CSS pace sets.</td><td>12–14</td></tr>
+          <tr><td><strong>Saturday</strong></td><td><span class="pill bike">Race Sim Bike</span> + <span class="pill run">Long Run</span></td><td>140–160km bike + 15km run</td><td>Peak session. Simulate race day nutrition entirely. Run 15km at Ironman marathon pace.</td><td>17–20</td></tr>
+          <tr><td><strong>Sunday</strong></td><td><span class="pill rest">Recovery</span></td><td>30–45 min walk or swim</td><td>Full recovery. Cold bath if available. 9+ hrs sleep mandatory. Check Whoop recovery before Monday.</td><td>2–5</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:12px; font-size:12px; color:var(--muted);">Weekly swim: ~10,000m · Weekly bike: ~220km · Weekly run: ~35km · HIIT: 1 session/week</div>
+    </div>
+
+    <!-- PHASE 4 -->
+    <div class="phase-content" id="phase-4">
+      <div style="color:var(--green); font-size:13px; font-weight:600; margin-bottom:10px;">Goal: Preserve fitness, restore freshness, race-day execution · Reduce volume 40–60% · Trust the training!</div>
+      <table class="detail-table">
+        <thead><tr><th>Day</th><th>Session</th><th>Volume / Intensity</th><th>Focus</th><th>Strain Target</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Monday</strong></td><td><span class="pill swim">Swim</span></td><td>2,500m · 55 min</td><td>Maintain feel. Race-pace 100m repeats. No intensity — aerobic only.</td><td>10–12</td></tr>
+          <tr><td><strong>Tuesday</strong></td><td><span class="pill str">Strength</span> + <span class="pill run">Run</span></td><td>30 min light + 30 min run</td><td>Activation work only. Run: race pace 20 min, easy 10 min. Feel sharp, not tired.</td><td>9–11</td></tr>
+          <tr><td><strong>Wednesday</strong></td><td><span class="pill swim">Swim</span> + <span class="pill bike">Bike</span></td><td>2,000m + 30km bike</td><td>Short brick. Race-pace effort 15 min bike. Confirm gear, nutrition system works.</td><td>10–12</td></tr>
+          <tr><td><strong>Thursday</strong></td><td><span class="pill str">Core</span> + <span class="pill run">Run</span></td><td>20 min core + 20 min run</td><td>Mobility focus. Short strides at race pace. Legs should feel fresh and springy.</td><td>7–9</td></tr>
+          <tr><td><strong>Friday</strong></td><td><span class="pill swim">Swim</span></td><td>1,500m · 30 min</td><td>Final pre-race swim. Easy and controlled. Check open water conditions if possible.</td><td>7–9</td></tr>
+          <tr><td><strong>Saturday</strong></td><td><span class="pill bike">Easy Bike</span></td><td>20km · 45 min</td><td>Shake-out ride. Light spin. Check bike mechanics one final time.</td><td>5–7</td></tr>
+          <tr><td><strong>Sunday</strong></td><td>🏁 <strong>RACE DAY</strong></td><td>Ironman Maryland!</td><td>Execute your plan. Swim Z2, Bike Z2–low Z3, Run Z2 first half → Z3 second half.</td><td>20+</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:12px; font-size:12px; color:var(--muted);">Race week: swim 2,000m · bike 50km total · run 10km total · No HIIT · Sleep 9 hrs every night this week</div>
+    </div>
+  </div>
+
+  <!-- WEEKLY TEMPLATE -->
+  <div class="card">
+    <h2>📆 Weekly Training Template — Phase 1 (Current)</h2>
+    <div class="week-grid">
+      <div class="day-card" style="border-color:var(--accent2);">
+        <div class="day-name">Mon</div>
+        <span class="session-pill swim">🏊 Swim</span>
+        <span class="session-pill rest">2,500m</span>
+        <div class="volume">Endurance · 55 min</div>
+      </div>
+      <div class="day-card">
+        <div class="day-name">Tue</div>
+        <span class="session-pill strength">💪 Strength</span>
+        <span class="session-pill run">🏃 Run Z2</span>
+        <div class="volume">45+30 min</div>
+      </div>
+      <div class="day-card">
+        <div class="day-name">Wed</div>
+        <span class="session-pill swim">🏊 Swim</span>
+        <span class="session-pill bike">🚴 Spin</span>
+        <div class="volume">2,000m + 45 min</div>
+      </div>
+      <div class="day-card">
+        <div class="day-name">Thu</div>
+        <span class="session-pill strength">💪 Strength</span>
+        <span class="session-pill run">🏃 Tempo</span>
+        <div class="volume">40+35 min</div>
+      </div>
+      <div class="day-card">
+        <div class="day-name">Fri</div>
+        <span class="session-pill swim">🏊 Swim</span>
+        <div class="volume">2,500m · 60 min</div>
+      </div>
+      <div class="day-card">
+        <div class="day-name">Sat</div>
+        <span class="session-pill bike">🚴 Long Ride</span>
+        <div class="volume">60–75km · 2.5 hrs</div>
+      </div>
+      <div class="day-card">
+        <div class="day-name">Sun</div>
+        <span class="session-pill rest">😴 Light / Rest</span>
+        <div class="volume">Walk or Yoga</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RACE TARGETS -->
+  <div class="card">
+    <h2>🎯 Race Day Targets vs Current Fitness</h2>
+    <div class="targets-row">
+      <div class="target-card swim">
+        <div class="t-icon">🏊</div>
+        <div class="t-label">Swim 3.86km</div>
+        <div class="t-target">1:25:00</div>
+        <div class="t-current">Current pace: ~2:00/100m · Need: 1:52/100m</div>
+      </div>
+      <div class="target-card bike">
+        <div class="t-icon">🚴</div>
+        <div class="t-label">Bike 180km</div>
+        <div class="t-target">5:45:00</div>
+        <div class="t-current">Current longest: ~92km · Need: 5.5 hrs at ~31 km/h</div>
+      </div>
+      <div class="target-card run">
+        <div class="t-icon">🏃</div>
+        <div class="t-label">Run 42.2km</div>
+        <div class="t-target">4:30:00</div>
+        <div class="t-current">Best Half: 2:06 · Target full: 6:22/km pace</div>
+      </div>
+    </div>
+    <div style="margin-top:12px; padding:10px 14px; background:var(--surface2); border-radius:8px; font-size:12px; color:var(--muted);">
+      ⏱️ <strong style="color:var(--text);">Projected Finish: 12:15–13:00</strong> including T1 (10 min) and T2 (8 min). Realistic for your current fitness with 17 weeks of structured training. Goal: complete strong, not race.
+    </div>
+  </div>
+
+  <!-- TRACKING FIELDS -->
+  <div class="card">
+    <h2>📋 Recommended Tracking Fields — Daily Log</h2>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:14px;">These are the fields that matter most for Ironman preparation. Track daily in Whoop, Garmin, or your log.</p>
+    <div class="field-grid">
+      <div class="field-card">
+        <div class="f-title">🔴 Recovery Score</div>
+        <div class="f-why">Your daily green/yellow/red light. Below 34%: rest or reduce intensity. 34–66%: normal training. Above 66%: can push harder.</div>
+        <span class="f-source src-whoop">Whoop Auto</span>
+      </div>
+      <div class="field-card">
+        <div class="f-title">💜 HRV (Heart Rate Variability)</div>
+        <div class="f-why">Most reliable physiological stress marker. Your 90-day avg is 34ms — target 40+ ms by race day through better sleep and training adaptation.</div>
+        <span class="f-source src-whoop">Whoop Auto</span>
+      </div>
+      <div class="field-card">
+        <div class="f-title">😴 Sleep Captured (hrs)</div>
+        <div class="f-why">Actual hours of sleep. Ironman training requires 8–9 hrs minimum. You're currently at 6.2 hrs avg — this is your most critical metric to improve.</div>
+        <span class="f-source src-whoop">Whoop Auto</span>
+      </div>
+      <div class="field-card">
+        <div class="f-title">⏰ Sleep Required (hrs)</div>
+        <div class="f-why">Whoop's calculated sleep need based on activity and recovery. Use this to set your bedtime. Currently avg 9.5 hrs. Track the gap (sleep debt).</div>
+        <span class="f-source src-whoop">Whoop Auto</span>
+      </div>
+      <div class="field-card">
+        <div class="f-title">🔥 Activity Strain</div>
+        <div class="f-why">Per-session strain on Whoop scale (0–21). Swim target: 11–14. Long bike: 14–18. Hard runs: 13–16. Strength: 8–12. Light day: 3–6.</div>
+        <span class="f-source src-whoop">Whoop Auto</span>
+      </div>
+      <div class="field-card">
+        <div class="f-title">🍎 Calories Burned</div>
+        <div class="f-why">Total daily energy expenditure. During peak training weeks, expect 3,500–4,500 cal/day. You need to match intake to prevent muscle breakdown.</div>
+        <span class="f-source src-whoop">Whoop Auto</span>
+      </div>
+      <div class="field-card">
+        <div class="f-title">🏊 Swim Distance (m)</div>
+        <div class="f-why">Track weekly yardage. Build from ~7,000m/week to ~12,000m/week by peak phase. Avg 100m pace is your key swim metric.</div>
+        <span class="f-source src-garmin">Garmin Swim</span>
+      </div>
+      <div class="field-card">
+        <div class="f-title">🚴 Bike Distance (km) + Power (W)</div>
+        <div class="f-why">Weekly bike km is your biggest training lever. Build from 75km to 220km/week. Power (FTP): your biggest gap — aim to establish a baseline in Phase 1.</div>
+        <span class="f-source src-garmin">Garmin / Strava</span>
+      </div>
+      <div class="field-card">
+        <div class="f-title">🏃 Run Distance (km) + Pace</div>
+        <div class="f-why">Weekly run mileage builds from ~12km to ~40km. Track pace at Zone 2 HR (145 bpm or below) — this is more important than total speed for Ironman.</div>
+        <span class="f-source src-garmin">Garmin / Strava</span>
+      </div>
+      <div class="field-card">
+        <div class="f-title">🥤 Hydration & Nutrition (g carbs)</div>
+        <div class="f-why">Critical for sessions over 90 min. Target 60–80g carbs/hr on bike and run. Start training your gut NOW. Note any GI issues.</div>
+        <span class="f-source src-manual">Manual Log</span>
+      </div>
+      <div class="field-card">
+        <div class="f-title">😣 Perceived Effort (RPE 1–10)</div>
+        <div class="f-why">Your subjective feel. A mismatch between RPE and HR is a red flag (high RPE + low HR = fatigued). Use alongside Whoop recovery score.</div>
+        <span class="f-source src-manual">Manual Log</span>
+      </div>
+      <div class="field-card">
+        <div class="f-title">💡 Next Session Recommendation</div>
+        <div class="f-why">Based on recovery score: 🟢 &gt;67% = Train as planned. 🟡 34–66% = Reduce intensity 10–15%. 🔴 &lt;34% = Switch to recovery session or rest.</div>
+        <span class="f-source src-whoop">Whoop + Coach</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- HR ZONES -->
+  <div class="card">
+    <h2>❤️ Heart Rate Zone Guide — Your Personal Zones</h2>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Based on your running avg HR (152 bpm) and max HR (175 bpm). Most Ironman training = Zone 2.</p>
+    <table class="detail-table">
+      <thead><tr><th>Zone</th><th>HR Range</th><th>Feel</th><th>Use For</th><th>Whoop Strain</th></tr></thead>
+      <tbody>
+        <tr><td><span style="color:#60a5fa; font-weight:700;">Z1 Recovery</span></td><td>&lt;125 bpm</td><td>Very easy, can hold conversation</td><td>Warm-up, cool-down, recovery days, Sunday light sessions</td><td>3–7</td></tr>
+        <tr><td><span style="color:#34d399; font-weight:700;">Z2 Aerobic</span></td><td>125–145 bpm</td><td>Easy, full sentences possible</td><td>⭐ All long bike/run, 70% of your swim sets, base building</td><td>8–13</td></tr>
+        <tr><td><span style="color:#fbbf24; font-weight:700;">Z3 Tempo</span></td><td>145–158 bpm</td><td>Moderate, short phrases</td><td>Tempo runs, steady bike intervals, some swim sets</td><td>13–16</td></tr>
+        <tr><td><span style="color:#f97316; font-weight:700;">Z4 Threshold</span></td><td>158–168 bpm</td><td>Hard, 1–2 words</td><td>Threshold intervals, race-pace swim efforts, HIIT peak</td><td>15–18</td></tr>
+        <tr><td><span style="color:#ef4444; font-weight:700;">Z5 Max</span></td><td>&gt;168 bpm</td><td>All-out effort</td><td>Sprint finishes only. Very limited use in Ironman training.</td><td>17–20</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:10px; font-size:12px; color:var(--muted);">⚠️ Your current running avg HR is 152 bpm (Zone 3). For Ironman, most easy runs must be Zone 2. Slow down to speed up — this is the most important adjustment to make in Phase 1.</div>
+  </div>
+
+  <!-- COACH NOTES -->
+  <div class="card" style="border-color:rgba(249,115,22,.35);">
+    <h2>🧑‍🏫 Coach's Priority Actions — This Week</h2>
+    <table class="detail-table">
+      <thead><tr><th>#</th><th>Priority</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><span style="color:var(--red); font-weight:700;">CRITICAL</span></td><td>Address sleep deficit immediately. Set a consistent 9:30pm bedtime. This is more impactful than any additional training.</td></tr>
+        <tr><td>2</td><td><span style="color:var(--accent); font-weight:700;">HIGH</span></td><td>Start 1 dedicated bike session on Saturday (60–75km, Zone 2 only). This is your biggest fitness gap for Maryland.</td></tr>
+        <tr><td>3</td><td><span style="color:var(--accent); font-weight:700;">HIGH</span></td><td>Slow down your easy runs. HR should stay under 145 bpm. Use run/walk method if needed. Build aerobic base before speed.</td></tr>
+        <tr><td>4</td><td><span style="color:var(--yellow); font-weight:700;">MEDIUM</span></td><td>Connect Strava to pull GPS data for bike and run distance tracking. Currently only Whoop data available.</td></tr>
+        <tr><td>5</td><td><span style="color:var(--yellow); font-weight:700;">MEDIUM</span></td><td>Begin race nutrition practice on Wednesday bike sessions. 1 gel or 30g carbs per 45 min. Train the gut now.</td></tr>
+        <tr><td>6</td><td><span style="color:var(--green); font-weight:700;">ONGOING</span></td><td>Maintain your excellent swim consistency (3×/week). Gradually increase from 2,000m to 3,800m per session over 17 weeks.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<footer>Sri's Ironman Maryland 2026 · Coached Dashboard · Built from Whoop data (753 cycles, 647 workouts) · June 6, 2026</footer>
+
+<script>
+// ============ DATA ============
+const rawData = [{"date":"2026-05-07","recovery":37.0,"hrv":29.0,"rhr":62.0,"strain":4.1,"calories":1597.0,"sleep_dur":338.0,"sleep_need":593.0,"sleep_perf":73.0,"workouts":[]},{"date":"2026-05-08","recovery":28.0,"hrv":26.0,"rhr":70.0,"strain":12.6,"calories":1901.0,"sleep_dur":449.0,"sleep_need":598.0,"sleep_perf":79.0,"workouts":[{"activity":"Swimming","duration":58.0,"strain":12.1,"calories":555.0,"avg_hr":135.0,"max_hr":175.0}]},{"date":"2026-05-09","workouts":[{"activity":"Functional Fitness","duration":66.0,"strain":12.3,"calories":236.0,"avg_hr":108.0,"max_hr":142.0}]},{"date":"2026-05-10","recovery":65.0,"hrv":34.0,"rhr":63.0,"strain":11.7,"calories":1801.0,"sleep_dur":412.0,"sleep_need":565.0,"sleep_perf":84.0,"workouts":[{"activity":"Functional Fitness","duration":62.0,"strain":11.6,"calories":132.0,"avg_hr":100.0,"max_hr":135.0}]},{"date":"2026-05-11","recovery":27.0,"hrv":29.0,"rhr":66.0,"strain":13.3,"calories":2213.0,"sleep_dur":283.0,"sleep_need":563.0,"sleep_perf":60.0,"workouts":[{"activity":"Swimming","duration":65.0,"strain":12.4,"calories":589.0,"avg_hr":132.0,"max_hr":167.0}]},{"date":"2026-05-13","recovery":63.0,"hrv":32.0,"rhr":63.0,"strain":4.5,"calories":1677.0,"sleep_dur":376.0,"sleep_need":571.0,"sleep_perf":81.0,"workouts":[]},{"date":"2026-05-14","recovery":78.0,"hrv":36.0,"rhr":63.0,"strain":12.9,"calories":2311.0,"sleep_dur":399.0,"sleep_need":564.0,"sleep_perf":84.0,"workouts":[]},{"date":"2026-05-15","recovery":90.0,"hrv":43.0,"rhr":65.0,"strain":12.1,"calories":1834.0,"sleep_dur":378.0,"sleep_need":576.0,"sleep_perf":83.0,"workouts":[{"activity":"Swimming","duration":57.0,"strain":12.1,"calories":528.0,"avg_hr":133.0,"max_hr":175.0}]},{"date":"2026-05-16","recovery":54.0,"hrv":31.0,"rhr":62.0,"strain":9.5,"calories":1911.0,"sleep_dur":353.0,"sleep_need":550.0,"sleep_perf":75.0,"workouts":[{"activity":"Functional Fitness","duration":63.0,"strain":11.8,"calories":161.0,"avg_hr":103.0,"max_hr":144.0}]},{"date":"2026-05-17","recovery":47.0,"hrv":38.0,"rhr":62.0,"strain":3.7,"calories":1771.0,"sleep_dur":190.0,"sleep_need":420.0,"sleep_perf":50.0,"workouts":[{"activity":"Swimming","duration":37.0,"strain":9.8,"calories":146.0,"avg_hr":106.0,"max_hr":154.0}]},{"date":"2026-05-18","recovery":77.0,"hrv":39.0,"rhr":61.0,"strain":12.1,"calories":1758.0,"sleep_dur":333.0,"sleep_need":547.0,"sleep_perf":75.0,"workouts":[]},{"date":"2026-05-19","recovery":92.0,"hrv":41.0,"rhr":59.0,"strain":3.2,"calories":1710.0,"sleep_dur":454.0,"sleep_need":574.0,"sleep_perf":82.0,"workouts":[{"activity":"Functional Fitness","duration":57.0,"strain":11.8,"calories":183.0,"avg_hr":107.0,"max_hr":139.0}]},{"date":"2026-05-20","recovery":74.0,"hrv":35.0,"rhr":62.0,"strain":9.9,"calories":2060.0,"sleep_dur":392.0,"sleep_need":525.0,"sleep_perf":84.0,"workouts":[]},{"date":"2026-05-21","recovery":85.0,"hrv":39.0,"rhr":61.0,"strain":11.7,"calories":2157.0,"sleep_dur":401.0,"sleep_need":544.0,"sleep_perf":87.0,"workouts":[{"activity":"Swimming","duration":41.0,"strain":8.6,"calories":329.0,"avg_hr":128.0,"max_hr":163.0}]},{"date":"2026-05-22","recovery":71.0,"hrv":34.0,"rhr":69.0,"strain":16.8,"calories":2535.0,"sleep_dur":425.0,"sleep_need":557.0,"sleep_perf":84.0,"workouts":[{"activity":"Swimming","duration":41.0,"strain":9.7,"calories":367.0,"avg_hr":131.0,"max_hr":172.0}]},{"date":"2026-05-23","workouts":[{"activity":"HIIT","duration":41.0,"strain":14.4,"calories":512.0,"avg_hr":147.0,"max_hr":169.0},{"activity":"Functional Fitness","duration":46.0,"strain":11.5,"calories":252.0,"avg_hr":117.0,"max_hr":155.0}]},{"date":"2026-05-24","recovery":83.0,"hrv":38.0,"rhr":62.0,"strain":12.2,"calories":1914.0,"sleep_dur":419.0,"sleep_need":581.0,"sleep_perf":80.0,"workouts":[{"activity":"Functional Fitness","duration":58.0,"strain":11.5,"calories":127.0,"avg_hr":102.0,"max_hr":133.0}]},{"date":"2026-05-25","recovery":94.0,"hrv":44.0,"rhr":63.0,"strain":12.1,"calories":2170.0,"sleep_dur":381.0,"sleep_need":547.0,"sleep_perf":79.0,"workouts":[{"activity":"Swimming","duration":67.0,"strain":11.1,"calories":570.0,"avg_hr":130.0,"max_hr":159.0}]},{"date":"2026-05-26","recovery":49.0,"hrv":33.0,"rhr":66.0,"strain":10.0,"calories":2133.0,"sleep_dur":432.0,"sleep_need":552.0,"sleep_perf":81.0,"workouts":[{"activity":"Cycling","duration":60.0,"strain":7.5,"calories":306.0,"avg_hr":116.0,"max_hr":140.0}]},{"date":"2026-05-27","workouts":[{"activity":"Swimming","duration":36.0,"strain":9.0,"calories":323.0,"avg_hr":132.0,"max_hr":164.0}]},{"date":"2026-05-28","recovery":73.0,"hrv":38.0,"rhr":60.0,"strain":4.8,"calories":1684.0,"sleep_dur":365.0,"sleep_need":536.0,"sleep_perf":82.0,"workouts":[{"activity":"HIIT","duration":13.0,"strain":4.3,"calories":32.0,"avg_hr":96.0,"max_hr":155.0}]},{"date":"2026-05-29","workouts":[{"activity":"Swimming","duration":53.0,"strain":12.7,"calories":557.0,"avg_hr":139.0,"max_hr":169.0}]},{"date":"2026-05-30","recovery":35.0,"hrv":30.0,"rhr":66.0,"strain":12.4,"calories":1807.0,"sleep_dur":335.0,"sleep_need":596.0,"sleep_perf":69.0,"workouts":[{"activity":"Functional Fitness","duration":77.0,"strain":12.0,"calories":206.0,"avg_hr":101.0,"max_hr":136.0}]},{"date":"2026-05-31","recovery":36.0,"hrv":28.0,"rhr":71.0,"strain":4.0,"calories":1619.0,"sleep_dur":439.0,"sleep_need":596.0,"sleep_perf":70.0,"workouts":[]},{"date":"2026-06-01","recovery":67.0,"hrv":35.0,"rhr":62.0,"strain":13.6,"calories":2208.0,"sleep_dur":362.0,"sleep_need":571.0,"sleep_perf":77.0,"workouts":[{"activity":"Swimming","duration":51.0,"strain":10.6,"calories":459.0,"avg_hr":132.0,"max_hr":167.0}]},{"date":"2026-06-02","workouts":[{"activity":"Weightlifting","duration":62.0,"strain":12.9,"calories":341.0,"avg_hr":117.0,"max_hr":152.0}]},{"date":"2026-06-03","recovery":29.0,"hrv":28.0,"rhr":71.0,"strain":1.9,"calories":1631.0,"sleep_dur":367.0,"sleep_need":579.0,"sleep_perf":68.0,"workouts":[]},{"date":"2026-06-04","recovery":77.0,"hrv":36.0,"rhr":64.0,"strain":12.7,"calories":1803.0,"sleep_dur":376.0,"sleep_need":554.0,"sleep_perf":80.0,"workouts":[{"activity":"Functional Fitness","duration":65.0,"strain":12.5,"calories":267.0,"avg_hr":111.0,"max_hr":146.0}]},{"date":"2026-06-05","workouts":[{"activity":"Swimming","duration":50.0,"strain":11.4,"calories":485.0,"avg_hr":136.0,"max_hr":164.0}]},{"date":"2026-06-06","recovery":63.0,"hrv":32.0,"rhr":63.0,"strain":13.0,"calories":353.0,"sleep_dur":340.0,"sleep_need":558.0,"sleep_perf":70.0,"workouts":[{"activity":"Strength","duration":66.0,"strain":13.0,"calories":353.0,"avg_hr":117.0,"max_hr":153.0}]},
+{"date":"2026-06-07","recovery":87.0,"hrv":40.0,"rhr":63.0,"strain":16.6,"calories":1276.0,"sleep_dur":390.0,"sleep_need":589.0,"sleep_perf":75.0,"workouts":[{"activity":"Cycling","duration":116.0,"strain":16.6,"calories":1276.0,"avg_hr":147.0,"max_hr":163.0}]}];
+
+const datesWithData = rawData.filter(d => d.recovery != null);
+
+// ============ COUNTDOWN ============
+const raceDate = new Date('2026-10-04');
+const today = new Date('2026-06-06');
+const daysLeft = Math.ceil((raceDate - today) / 86400000);
+document.getElementById('countdown-days').textContent = daysLeft;
+
+// ============ ACTIVITY COLORS ============
+const actColors = {
+  Swimming: '#38bdf8', Cycling: '#f97316', Running: '#3fb950',
+  Weightlifting: '#a371f7', 'Functional Fitness': '#a371f7',
+  HIIT: '#f85149', Walking: '#8b949e', Activity: '#8b949e',
+  Barre: '#fb7185', Default: '#8b949e'
+};
+
+// ============ RECOVERY CHART ============
+const recoveryCtx = document.getElementById('recoveryChart').getContext('2d');
+new Chart(recoveryCtx, {
+  data: {
+    labels: datesWithData.map(d => d.date.slice(5)),
+    datasets: [
+      {
+        type: 'bar', label: 'Recovery %',
+        data: datesWithData.map(d => d.recovery),
+        backgroundColor: datesWithData.map(d => d.recovery >= 67 ? 'rgba(63,185,80,0.6)' : d.recovery >= 34 ? 'rgba(210,153,34,0.6)' : 'rgba(248,81,73,0.6)'),
+        borderRadius: 3, yAxisID: 'y',
+      },
+      {
+        type: 'line', label: 'HRV (ms)',
+        data: datesWithData.map(d => d.hrv),
+        borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.1)',
+        borderWidth: 2, pointRadius: 3, tension: 0.4, yAxisID: 'y2', fill: false
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: '#8b949e', font: { size: 11 } } } },
+    scales: {
+      x: { ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: 'rgba(48,54,61,0.5)' } },
+      y: { position: 'left', min: 0, max: 100, ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: 'rgba(48,54,61,0.3)' } },
+      y2: { position: 'right', min: 20, max: 55, ticks: { color: '#38bdf8', font: { size: 10 } }, grid: { display: false } }
+    }
+  }
+});
+
+// ============ STRAIN CHART ============
+const strainCtx = document.getElementById('strainChart').getContext('2d');
+new Chart(strainCtx, {
+  data: {
+    labels: rawData.map(d => d.date.slice(5)),
+    datasets: [
+      {
+        type: 'bar', label: 'Day Strain',
+        data: rawData.map(d => d.strain),
+        backgroundColor: rawData.map(d => {
+          const acts = d.workouts.map(w => w.activity);
+          if (acts.includes('Swimming')) return 'rgba(56,189,248,0.7)';
+          if (acts.includes('Cycling')) return 'rgba(249,115,22,0.7)';
+          if (acts.includes('Running')) return 'rgba(63,185,80,0.7)';
+          if (acts.includes('HIIT')) return 'rgba(248,81,73,0.7)';
+          return 'rgba(163,113,247,0.7)';
+        }),
+        borderRadius: 3
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: 'rgba(48,54,61,0.5)' } },
+      y: { min: 0, max: 21, ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: 'rgba(48,54,61,0.3)' } }
+    }
+  }
+});
+
+// ============ SLEEP CHART ============
+const sleepCtx = document.getElementById('sleepChart').getContext('2d');
+new Chart(sleepCtx, {
+  data: {
+    labels: datesWithData.map(d => d.date.slice(5)),
+    datasets: [
+      {
+        type: 'bar', label: 'Sleep Got (min)',
+        data: datesWithData.map(d => d.sleep_dur),
+        backgroundColor: 'rgba(163,113,247,0.65)', borderRadius: 3, order: 2
+      },
+      {
+        type: 'line', label: 'Sleep Need (min)',
+        data: datesWithData.map(d => d.sleep_need),
+        borderColor: '#f85149', borderWidth: 2, borderDash: [5, 3],
+        pointRadius: 0, tension: 0.3, fill: false, order: 1
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: '#8b949e', font: { size: 11 } } } },
+    scales: {
+      x: { ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: 'rgba(48,54,61,0.5)' } },
+      y: { min: 100, max: 700, ticks: { color: '#8b949e', font: { size: 10 }, callback: v => (v/60).toFixed(1)+'h' }, grid: { color: 'rgba(48,54,61,0.3)' } }
+    }
+  }
+});
+
+// ============ ACTIVITY LIST ============
+const activityListEl = document.getElementById('activityList');
+const recentWorkouts = [];
+rawData.forEach(d => {
+  d.workouts.forEach(w => recentWorkouts.push({ ...w, date: d.date }));
+});
+recentWorkouts.sort((a, b) => b.date.localeCompare(a.date));
+
+recentWorkouts.slice(0, 8).forEach(w => {
+  const color = actColors[w.activity] || actColors.Default;
+  const div = document.createElement('div');
+  div.className = 'activity-row';
+  div.innerHTML = `
+    <div class="activity-dot" style="background:${color}"></div>
+    <div class="act-name">${w.activity}</div>
+    <div class="act-date">${w.date.slice(5)}</div>
+    <div class="act-stat">${w.duration || '--'} min · ${w.avg_hr ? w.avg_hr+'♥' : ''}</div>
+    <div class="act-strain">${w.strain || '--'}</div>
+  `;
+  activityListEl.appendChild(div);
+});
+
+// ============ PHASE TABS ============
+function showPhase(n) {
+  document.querySelectorAll('.phase-content').forEach(el => el.classList.remove('visible'));
+  document.querySelectorAll('.phase-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('phase-' + n).classList.add('visible');
+  document.querySelectorAll('.phase-tab')[n - 1].classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -306,6 +306,149 @@
     .targets-row { grid-template-columns: 1fr; }
     .week-grid { grid-template-columns: repeat(4, 1fr); }
   }
+
+  /* Responsive table scroll */
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table-scroll table { min-width: 600px; }
+  .detail-table .table-scroll { min-width: 500px; }
+  @media (max-width: 480px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .countdown-box .days { font-size: 28px; }
+  }
+
+  /* ===== SECTION NAVIGATION ===== */
+  .nav-bar {
+    position: sticky; top: 0; z-index: 200;
+    background: var(--surface); border-bottom: 2px solid var(--border);
+    display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  .nav-btn {
+    flex: 1; min-width: 64px; padding: 10px 4px 8px;
+    background: none; border: none; border-bottom: 3px solid transparent;
+    color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .nav-btn:hover { color: var(--text); }
+  .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .nav-icon { font-size: 20px; line-height: 1; }
+  .nav-label { letter-spacing: 0.3px; }
+
+  .section-panel { display: none; }
+  .section-panel.active { display: block; }
+
+
+  /* ===== AI COACH CHATBOT ===== */
+  .chat-fab {
+    position: fixed; bottom: 24px; right: 24px; z-index: 500;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #ea580c);
+    border: none; cursor: pointer; box-shadow: 0 4px 20px rgba(249,115,22,0.5);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .chat-fab:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(249,115,22,0.65); }
+  .chat-fab .chat-badge {
+    position: absolute; top: 0; right: 0; width: 18px; height: 18px;
+    background: var(--green); border-radius: 50%; border: 2px solid var(--bg);
+    font-size: 10px; font-weight: 700; color: white;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .chat-panel {
+    position: fixed; bottom: 0; right: 16px; z-index: 600;
+    width: 360px; max-width: calc(100vw - 32px);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px 16px 0 0; box-shadow: 0 -8px 40px rgba(0,0,0,0.4);
+    display: flex; flex-direction: column;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.34,1.2,0.64,1);
+    max-height: 70vh;
+  }
+  .chat-panel.open { transform: translateY(0); }
+
+  .chat-header {
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    border-radius: 16px 16px 0 0; background: var(--surface);
+  }
+  .chat-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #ea580c);
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .chat-header-info { flex: 1; }
+  .chat-header-info .chat-name { font-weight: 700; font-size: 14px; }
+  .chat-header-info .chat-status { font-size: 11px; color: var(--green); }
+  .chat-close-btn {
+    background: none; border: none; color: var(--muted); font-size: 18px;
+    cursor: pointer; padding: 4px 6px; border-radius: 6px; line-height: 1;
+  }
+  .chat-close-btn:hover { background: var(--surface2); }
+
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 14px; display: flex;
+    flex-direction: column; gap: 10px; min-height: 200px;
+  }
+  .chat-msg { display: flex; gap: 8px; align-items: flex-end; }
+  .chat-msg.user { flex-direction: row-reverse; }
+  .chat-bubble {
+    max-width: 80%; padding: 10px 13px; border-radius: 16px;
+    font-size: 13px; line-height: 1.5;
+  }
+  .chat-msg.bot .chat-bubble {
+    background: var(--surface2); color: var(--text);
+    border-radius: 4px 16px 16px 16px; border: 1px solid var(--border);
+  }
+  .chat-msg.user .chat-bubble {
+    background: var(--accent); color: white;
+    border-radius: 16px 4px 16px 16px;
+  }
+  .chat-msg-avatar {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--accent), #ea580c);
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .chat-typing { display: flex; gap: 4px; padding: 10px 13px; }
+  .chat-typing span {
+    width: 7px; height: 7px; background: var(--muted); border-radius: 50%;
+    animation: chatBounce 1.2s infinite;
+  }
+  .chat-typing span:nth-child(2) { animation-delay: 0.2s; }
+  .chat-typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes chatBounce {
+    0%,60%,100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+  }
+
+  .chat-chips {
+    padding: 8px 14px; display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0;
+    border-top: 1px solid var(--border);
+  }
+  .chat-chip {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 20px;
+    padding: 5px 12px; font-size: 11px; font-weight: 600; color: var(--text);
+    cursor: pointer; white-space: nowrap; transition: all 0.15s;
+  }
+  .chat-chip:hover { background: var(--accent); border-color: var(--accent); color: white; }
+
+  .chat-input-row {
+    padding: 10px 14px 14px; display: flex; gap: 8px; flex-shrink: 0;
+    border-top: 1px solid var(--border);
+  }
+  .chat-input {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 9px 14px; color: var(--text);
+    font-size: 13px; font-family: inherit; outline: none;
+  }
+  .chat-input:focus { border-color: var(--accent); }
+  .chat-send-btn {
+    width: 38px; height: 38px; border-radius: 50%; background: var(--accent);
+    border: none; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; font-size: 16px; flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .chat-send-btn:hover { background: #ea580c; }
+
 </style>
 </head>
 <body>
@@ -331,9 +474,28 @@
   </div>
 </div>
 
+<nav class="nav-bar" id="mainNav">
+  <button class="nav-btn active" id="nav-today" onclick="showSection('today')">
+    <span class="nav-icon">🏠</span><span class="nav-label">Today</span>
+  </button>
+  <button class="nav-btn" id="nav-trends" onclick="showSection('trends')">
+    <span class="nav-icon">📈</span><span class="nav-label">Trends</span>
+  </button>
+  <button class="nav-btn" id="nav-plan" onclick="showSection('plan')">
+    <span class="nav-icon">📅</span><span class="nav-label">Plan</span>
+  </button>
+  <button class="nav-btn" id="nav-race" onclick="showSection('race')">
+    <span class="nav-icon">🎯</span><span class="nav-label">Race</span>
+  </button>
+  <button class="nav-btn" id="nav-log" onclick="showSection('log')">
+    <span class="nav-icon">📒</span><span class="nav-label">My Log</span>
+  </button>
+</nav>
+
 <div class="container">
 
-  <!-- LATEST ACTIVITY ALERT -->
+  <div class="section-panel active" id="section-today">
+<!-- LATEST ACTIVITY ALERT -->
   <div class="tip-banner" style="border-color:rgba(63,185,80,0.4); background:rgba(63,185,80,0.08);">
     <div style="font-size:18px; flex-shrink:0;">🟢</div>
     <p><strong>Week 1 Update (Jun 6–7):</strong> Sat — Strength 66 min, Strain 13, Recovery 63%. Sun — First Long Ride 27km, 116 min, Strain 16.6, Recovery 87% ↑, HRV 40ms ↑ (above baseline!). Great start — recovery bounced back strongly after the ride. <strong>Coach flag:</strong> Avg HR 147 on ride is top of Z2 — aim for 120–140 on next Saturday's ride.</p>
@@ -390,53 +552,20 @@
     </div>
   </div>
 
-  <!-- CHARTS ROW -->
-  <div class="grid-2">
-    <div class="card">
-      <h2>📊 Recovery & HRV — Last 30 Days</h2>
-      <div class="chart-wrap">
-        <canvas id="recoveryChart"></canvas>
-      </div>
-    </div>
-    <div class="card">
-      <h2>🔥 Strain & Activity — Last 30 Days</h2>
-      <div class="chart-wrap">
-        <canvas id="strainChart"></canvas>
-      </div>
+  <!-- TODAY'S ACTIVITIES -->
+  <div class="card" id="todayCard" style="border-color:rgba(249,115,22,0.45);">
+    <h2>⚡ Today's Activities <span class="badge" id="todayDate">--</span>
+      <button onclick="openLogModal()" style="margin-left:auto; background:var(--accent); color:white; border:none; border-radius:6px; padding:5px 14px; font-size:12px; font-weight:600; cursor:pointer;">+ Log</button>
+    </h2>
+    <div id="todayContent">
+      <div class="empty-log">No session logged yet today. Tap <strong>+ Log</strong> to add your workout.</div>
     </div>
   </div>
 
-  <!-- SLEEP + ACTIVITY -->
-  <div class="grid-2">
-    <div class="card">
-      <h2>😴 Sleep: Captured vs Required</h2>
-      <div class="chart-wrap">
-        <canvas id="sleepChart"></canvas>
-      </div>
-      <div style="margin-top:12px;">
-        <div class="sleep-row">
-          <div class="sleep-label" style="color:var(--purple);">Got</div>
-          <div class="sleep-bar-bg"><div class="sleep-bar-fill" id="sleepGotBar" style="width:59%;background:var(--purple);"></div></div>
-          <div class="sleep-val" id="sleepGotVal">6.2 hrs avg</div>
-        </div>
-        <div class="sleep-row">
-          <div class="sleep-label" style="color:var(--red);">Need</div>
-          <div class="sleep-bar-bg"><div class="sleep-bar-fill" style="width:100%;background:var(--red);opacity:0.6;"></div></div>
-          <div class="sleep-val">9.5 hrs avg</div>
-        </div>
-        <div style="font-size:11px; color:var(--muted); margin-top:8px;">⚡ Target 8.5 hrs minimum during heavy training weeks. Sleep is when your body adapts to training load.</div>
-      </div>
-    </div>
-    <div class="card">
-      <h2>🏃 Recent Activities <span class="badge">Last 30 Days</span></h2>
-      <div class="activity-list" id="activityList"></div>
-    </div>
-  </div>
-
-  <!-- WEEK 1 LOG -->
+<!-- WEEK 1 LOG -->
   <div class="card" style="border-color:rgba(63,185,80,0.35);">
     <h2>📓 Week 1 Training Log — Jun 6–12 <span class="badge">Phase 1 · Base</span></h2>
-    <table style="width:100%; border-collapse:collapse; font-size:12px;">
+    <div class="table-scroll"><table style="width:100%; border-collapse:collapse; font-size:12px;">
       <thead>
         <tr>
           <th style="padding:7px 10px; background:#1c2128; color:#8b949e; font-size:10px; text-transform:uppercase; letter-spacing:.5px; border:1px solid #30363d; text-align:left;">Date</th>
@@ -501,13 +630,64 @@
           <td style="padding:8px 10px; border:1px solid #30363d; text-align:center; color:#8b949e;">⏳</td>
         </tr>
       </tbody>
-    </table>
+    </table></div>
     <div style="margin-top:10px; padding:10px 14px; background:#1c2128; border-radius:8px; font-size:12px; color:#8b949e;">
       🏁 <strong style="color:#e6edf3;">Week 1 Progress:</strong> 2/7 sessions logged · <strong style="color:#3fb950;">Recovery trending up ↑</strong> · <strong style="color:#d29922;">Sleep debt ongoing ⚠️</strong> · <strong style="color:#f97316;">Bike HR slightly high — target Z2 (120–140) next ride</strong>
     </div>
   </div>
 
-  <!-- MY TRAINING LOG (localStorage entries) -->
+  
+  </div>
+
+  <div class="section-panel" id="section-trends">
+<!-- CHARTS ROW -->
+  <div class="grid-2">
+    <div class="card">
+      <h2>📊 Recovery & HRV — Last 30 Days</h2>
+      <div class="chart-wrap">
+        <canvas id="recoveryChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h2>🔥 Strain & Activity — Last 30 Days</h2>
+      <div class="chart-wrap">
+        <canvas id="strainChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLEEP + ACTIVITY -->
+  <div class="grid-2">
+    <div class="card">
+      <h2>😴 Sleep: Captured vs Required</h2>
+      <div class="chart-wrap">
+        <canvas id="sleepChart"></canvas>
+      </div>
+      <div style="margin-top:12px;">
+        <div class="sleep-row">
+          <div class="sleep-label" style="color:var(--purple);">Got</div>
+          <div class="sleep-bar-bg"><div class="sleep-bar-fill" id="sleepGotBar" style="width:59%;background:var(--purple);"></div></div>
+          <div class="sleep-val" id="sleepGotVal">6.2 hrs avg</div>
+        </div>
+        <div class="sleep-row">
+          <div class="sleep-label" style="color:var(--red);">Need</div>
+          <div class="sleep-bar-bg"><div class="sleep-bar-fill" style="width:100%;background:var(--red);opacity:0.6;"></div></div>
+          <div class="sleep-val">9.5 hrs avg</div>
+        </div>
+        <div style="font-size:11px; color:var(--muted); margin-top:8px;">⚡ Target 8.5 hrs minimum during heavy training weeks. Sleep is when your body adapts to training load.</div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>🏃 Recent Activities <span class="badge">Last 30 Days</span></h2>
+      <div class="activity-list" id="activityList"></div>
+    </div>
+  </div>
+
+  
+  </div>
+
+  <div class="section-panel" id="section-log">
+<!-- MY TRAINING LOG (localStorage entries) -->
   <div class="card" style="border-color:rgba(56,189,248,0.35);" id="myLogCard">
     <h2>📒 My Training Log <span class="badge" id="logCount">0 entries</span>
       <button onclick="openLogModal()" style="margin-left:auto; background:var(--accent); color:white; border:none; border-radius:6px; padding:5px 14px; font-size:12px; font-weight:600; cursor:pointer;">+ Add Entry</button>
@@ -517,7 +697,11 @@
     </div>
   </div>
 
-  <!-- PHASE TIMELINE -->
+  
+  </div>
+
+  <div class="section-panel" id="section-plan">
+<!-- PHASE TIMELINE -->
   <div class="card">
     <h2>📅 17-Week Training Plan — Ironman Maryland</h2>
     <div class="phase-timeline">
@@ -551,7 +735,7 @@
 
     <div class="phase-content visible" id="phase-1">
       <div style="color:var(--accent2); font-size:13px; font-weight:600; margin-bottom:10px;">Goal: Build aerobic base, establish bike routine, lock in run form · Strain target: 10–13</div>
-      <table class="detail-table">
+      <div class="table-scroll"><table class="detail-table">
         <thead><tr><th>Day</th><th>Session</th><th>Volume / Intensity</th><th>Focus</th><th>Strain Target</th></tr></thead>
         <tbody>
           <tr><td><strong>Monday</strong></td><td><span class="pill swim">Swim</span></td><td>2,500m · 55 min</td><td>Technique drills + steady aerobic. Catch-up drill, pull sets, 200m repeats.</td><td>11–13</td></tr>
@@ -562,13 +746,13 @@
           <tr><td><strong>Saturday</strong></td><td><span class="pill bike">Long Bike</span></td><td>60–75 km · 2.5 hrs</td><td>Steady Z2 ride. Practice nutrition strategy. No HR above Z3.</td><td>12–14</td></tr>
           <tr><td><strong>Sunday</strong></td><td><span class="pill rest">Light / Recovery</span></td><td>30 min walk or yoga</td><td>Active recovery. Focus on sleep (target 9+ hrs tonight). Foam roll.</td><td>3–5</td></tr>
         </tbody>
-      </table>
+      </table></div>
       <div style="margin-top:12px; font-size:12px; color:var(--muted);">Weekly swim volume: ~7,000m · Weekly bike: ~75km · Weekly run: ~12km · HIIT: none (building base)</div>
     </div>
 
     <div class="phase-content" id="phase-2">
       <div style="color:var(--accent); font-size:13px; font-weight:600; margin-bottom:10px;">Goal: Extend bike to 120km, add brick workouts, run off the bike, introduce HIIT · Strain target: 13–16</div>
-      <table class="detail-table">
+      <div class="table-scroll"><table class="detail-table">
         <thead><tr><th>Day</th><th>Session</th><th>Volume / Intensity</th><th>Focus</th><th>Strain Target</th></tr></thead>
         <tbody>
           <tr><td><strong>Monday</strong></td><td><span class="pill swim">Swim</span></td><td>3,000m · 65 min</td><td>Open water simulation sets. 6×500m with 30s rest. Race-pace 50m sprints.</td><td>13–15</td></tr>
@@ -579,13 +763,13 @@
           <tr><td><strong>Saturday</strong></td><td><span class="pill bike">Long Bike</span> + <span class="pill run">Run</span></td><td>100–120km bike + 5km run</td><td>Key session. Nutrition: 60–80g carbs/hr. Run off bike Z2 only. Total 4–5 hrs.</td><td>15–18</td></tr>
           <tr><td><strong>Sunday</strong></td><td><span class="pill rest">Light Run</span></td><td>45 min easy run</td><td>Z1–Z2 only. Recovery run, HR under 140. If recovery &lt;50%, swap for walk.</td><td>6–9</td></tr>
         </tbody>
-      </table>
+      </table></div>
       <div style="margin-top:12px; font-size:12px; color:var(--muted);">Weekly swim: ~8,500m · Weekly bike: ~150km · Weekly run: ~22km · HIIT: 1 session/week</div>
     </div>
 
     <div class="phase-content" id="phase-3">
       <div style="color:var(--red); font-size:13px; font-weight:600; margin-bottom:10px;">Goal: Race simulation, peak volume, 160km bike, 30km run · Strain target: 15–18 · Sleep 9 hrs minimum!</div>
-      <table class="detail-table">
+      <div class="table-scroll"><table class="detail-table">
         <thead><tr><th>Day</th><th>Session</th><th>Volume / Intensity</th><th>Focus</th><th>Strain Target</th></tr></thead>
         <tbody>
           <tr><td><strong>Monday</strong></td><td><span class="pill swim">Swim</span></td><td>3,800m · 80 min</td><td>Race distance simulation. Full 3.86km unbroken. Record time — aim under 90 min.</td><td>14–16</td></tr>
@@ -596,13 +780,13 @@
           <tr><td><strong>Saturday</strong></td><td><span class="pill bike">Race Sim Bike</span> + <span class="pill run">Long Run</span></td><td>140–160km bike + 15km run</td><td>Peak session. Simulate race day nutrition entirely. Run 15km at Ironman marathon pace.</td><td>17–20</td></tr>
           <tr><td><strong>Sunday</strong></td><td><span class="pill rest">Recovery</span></td><td>30–45 min walk or swim</td><td>Full recovery. Cold bath if available. 9+ hrs sleep mandatory. Check Whoop recovery before Monday.</td><td>2–5</td></tr>
         </tbody>
-      </table>
+      </table></div>
       <div style="margin-top:12px; font-size:12px; color:var(--muted);">Weekly swim: ~10,000m · Weekly bike: ~220km · Weekly run: ~35km · HIIT: 1 session/week</div>
     </div>
 
     <div class="phase-content" id="phase-4">
       <div style="color:var(--green); font-size:13px; font-weight:600; margin-bottom:10px;">Goal: Preserve fitness, restore freshness, race-day execution · Reduce volume 40–60% · Trust the training!</div>
-      <table class="detail-table">
+      <div class="table-scroll"><table class="detail-table">
         <thead><tr><th>Day</th><th>Session</th><th>Volume / Intensity</th><th>Focus</th><th>Strain Target</th></tr></thead>
         <tbody>
           <tr><td><strong>Monday</strong></td><td><span class="pill swim">Swim</span></td><td>2,500m · 55 min</td><td>Maintain feel. Race-pace 100m repeats. No intensity — aerobic only.</td><td>10–12</td></tr>
@@ -613,7 +797,7 @@
           <tr><td><strong>Saturday</strong></td><td><span class="pill bike">Easy Bike</span></td><td>20km · 45 min</td><td>Shake-out ride. Light spin. Check bike mechanics one final time.</td><td>5–7</td></tr>
           <tr><td><strong>Sunday</strong></td><td>🏁 <strong>RACE DAY</strong></td><td>Ironman Maryland!</td><td>Execute your plan. Swim Z2, Bike Z2–low Z3, Run Z2 first half → Z3 second half.</td><td>20+</td></tr>
         </tbody>
-      </table>
+      </table></div>
       <div style="margin-top:12px; font-size:12px; color:var(--muted);">Race week: swim 2,000m · bike 50km total · run 10km total · No HIIT · Sleep 9 hrs every night this week</div>
     </div>
   </div>
@@ -664,7 +848,11 @@
     </div>
   </div>
 
-  <!-- RACE TARGETS -->
+  
+  </div>
+
+  <div class="section-panel" id="section-race">
+<!-- RACE TARGETS -->
   <div class="card">
     <h2>🎯 Race Day Targets vs Current Fitness</h2>
     <div class="targets-row">
@@ -764,7 +952,7 @@
   <div class="card">
     <h2>❤️ Heart Rate Zone Guide — Your Personal Zones</h2>
     <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">Based on your running avg HR (152 bpm) and max HR (175 bpm). Most Ironman training = Zone 2.</p>
-    <table class="detail-table">
+    <div class="table-scroll"><div class="table-scroll"><table class="detail-table">
       <thead><tr><th>Zone</th><th>HR Range</th><th>Feel</th><th>Use For</th><th>Whoop Strain</th></tr></thead>
       <tbody>
         <tr><td><span style="color:#60a5fa; font-weight:700;">Z1 Recovery</span></td><td>&lt;125 bpm</td><td>Very easy, can hold conversation</td><td>Warm-up, cool-down, recovery days, Sunday light sessions</td><td>3–7</td></tr>
@@ -773,14 +961,14 @@
         <tr><td><span style="color:#f97316; font-weight:700;">Z4 Threshold</span></td><td>158–168 bpm</td><td>Hard, 1–2 words</td><td>Threshold intervals, race-pace swim efforts, HIIT peak</td><td>15–18</td></tr>
         <tr><td><span style="color:#ef4444; font-weight:700;">Z5 Max</span></td><td>&gt;168 bpm</td><td>All-out effort</td><td>Sprint finishes only. Very limited use in Ironman training.</td><td>17–20</td></tr>
       </tbody>
-    </table>
+    </table></div>
     <div style="margin-top:10px; font-size:12px; color:var(--muted);">⚠️ Your current running avg HR is 152 bpm (Zone 3). For Ironman, most easy runs must be Zone 2. Slow down to speed up — this is the most important adjustment to make in Phase 1.</div>
   </div>
 
   <!-- COACH NOTES -->
   <div class="card" style="border-color:rgba(249,115,22,.35);">
     <h2>🧑‍🏫 Coach's Priority Actions — This Week</h2>
-    <table class="detail-table">
+    <div class="table-scroll"><div class="table-scroll"><table class="detail-table">
       <thead><tr><th>#</th><th>Priority</th><th>Action</th></tr></thead>
       <tbody>
         <tr><td>1</td><td><span style="color:var(--red); font-weight:700;">CRITICAL</span></td><td>Address sleep deficit immediately. Set a consistent 9:30pm bedtime. This is more impactful than any additional training.</td></tr>
@@ -790,7 +978,11 @@
         <tr><td>5</td><td><span style="color:var(--yellow); font-weight:700;">MEDIUM</span></td><td>Begin race nutrition practice on Wednesday bike sessions. 1 gel or 30g carbs per 45 min. Train the gut now.</td></tr>
         <tr><td>6</td><td><span style="color:var(--green); font-weight:700;">ONGOING</span></td><td>Maintain your excellent swim consistency (3×/week). Gradually increase from 2,000m to 3,800m per session over 17 weeks.</td></tr>
       </tbody>
-    </table>
+    </table></div>
+  </div>
+
+</div>
+</div>
   </div>
 
 </div>
@@ -921,5 +1113,40 @@
 <div class="toast" id="toast">✅ Saved!</div>
 
 <script src="app.js"></script>
+
+<!-- ===== AI COACH CHATBOT ===== -->
+<button class="chat-fab" id="chatFab" onclick="toggleChat()" title="Coach AI">
+  🤖<div class="chat-badge">AI</div>
+</button>
+
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-header">
+    <div class="chat-avatar">🏊</div>
+    <div class="chat-header-info">
+      <div class="chat-name">Coach AI</div>
+      <div class="chat-status">● Online · Knows your Whoop data</div>
+    </div>
+    <button class="chat-close-btn" onclick="toggleChat()">✕</button>
+  </div>
+
+  <div class="chat-messages" id="chatMessages"></div>
+
+  <div class="chat-chips" id="chatChips">
+    <div class="chat-chip" onclick="chatAsk('Am I ready to train today?')">🟢 Ready today?</div>
+    <div class="chat-chip" onclick="chatAsk('How was my sleep this week?')">😴 Sleep?</div>
+    <div class="chat-chip" onclick="chatAsk('How many days to race?')">⏱️ Race countdown</div>
+    <div class="chat-chip" onclick="chatAsk('Show my best sessions')">🏆 Best sessions</div>
+    <div class="chat-chip" onclick="chatAsk('What is my biggest training gap?')">⚠️ Gaps</div>
+    <div class="chat-chip" onclick="chatAsk('How is my HRV trending?')">💜 HRV trend</div>
+  </div>
+
+  <div class="chat-input-row">
+    <input class="chat-input" id="chatInput" type="text"
+      placeholder="Ask your coach anything…"
+      onkeydown="if(event.key==='Enter') chatSend()">
+    <button class="chat-send-btn" onclick="chatSend()">➤</button>
+  </div>
+</div>
+
 </body>
 </html>

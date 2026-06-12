@@ -362,6 +362,74 @@ function saveLogEntry() {
 }
 
 // ===========================
+// TODAY'S ACTIVITIES CARD
+// ===========================
+function renderTodayCard() {
+  const today = new Date().toISOString().split('T')[0];
+  const dateEl = document.getElementById('todayDate');
+  const contentEl = document.getElementById('todayContent');
+
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const d = new Date();
+  if (dateEl) dateEl.textContent = d.getDate() + ' ' + months[d.getMonth()];
+  if (!contentEl) return;
+
+  const dataset = buildDataset();
+  const entry = dataset.find(function(d) { return d.date === today; });
+  const stored = getStoredEntries().find(function(e) { return e.date === today; });
+
+  if (!entry && !stored) {
+    contentEl.innerHTML = '<div class="empty-log">No session logged yet today. Tap <strong>+ Log</strong> to record your workout.</div>';
+    return;
+  }
+
+  const rec = (entry && entry.recovery) || (stored && stored.recovery);
+  const hrv = (entry && entry.hrv) || (stored && stored.hrv);
+  const strain = (entry && entry.strain) || (stored && stored.strain);
+  const workouts = (entry && entry.workouts && entry.workouts.length) ? entry.workouts : [];
+
+  const recColor = !rec ? '#8b949e' : rec >= 67 ? '#3fb950' : rec >= 34 ? '#d29922' : '#f85149';
+  const recIcon  = !rec ? '' : rec >= 67 ? '🟢' : rec >= 34 ? '🟡' : '🔴';
+
+  var html = '<div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px;">';
+  if (rec) html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 16px;text-align:center;">' +
+    '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Recovery</div>' +
+    '<div style="font-size:22px;font-weight:700;color:' + recColor + ';">' + rec + '%&nbsp;' + recIcon + '</div></div>';
+  if (hrv) html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 16px;text-align:center;">' +
+    '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">HRV</div>' +
+    '<div style="font-size:22px;font-weight:700;color:var(--accent2);">' + hrv + ' ms</div></div>';
+  if (strain) html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 16px;text-align:center;">' +
+    '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Strain</div>' +
+    '<div style="font-size:22px;font-weight:700;color:var(--accent);">' + (+strain).toFixed(1) + '</div></div>';
+  if (stored && stored.sleepGot) html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 16px;text-align:center;">' +
+    '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Sleep</div>' +
+    '<div style="font-size:22px;font-weight:700;color:var(--purple);">' + stored.sleepGot + ' hrs</div></div>';
+  html += '</div>';
+
+  if (workouts.length) {
+    html += '<div class="activity-list">';
+    workouts.forEach(function(w) {
+      var color = actColors[w.activity] || actColors.Default;
+      html += '<div class="activity-row">' +
+        '<div class="activity-dot" style="background:' + color + '"></div>' +
+        '<div class="act-name">' + w.activity + '</div>' +
+        '<div class="act-stat">' + (w.duration || '--') + ' min' + (w.avg_hr ? ' · ' + w.avg_hr + '♥' : '') + '</div>' +
+        '<div class="act-strain">' + (w.strain ? (+w.strain).toFixed(1) : '--') + '</div>' +
+        '</div>';
+    });
+    html += '</div>';
+  } else if (!rec && !hrv) {
+    html += '<div class="empty-log">No session logged yet today. Tap <strong>+ Log</strong> to record your workout.</div>';
+  }
+
+  if (stored && stored.notes) {
+    html += '<div style="margin-top:10px;font-size:12px;color:var(--muted);padding:8px 12px;background:var(--surface2);border-radius:6px;">📝 ' + stored.notes + '</div>';
+  }
+
+  contentEl.innerHTML = html;
+}
+
+// ===========================
 // REFRESH ALL
 // ===========================
 function refresh() {
@@ -370,6 +438,7 @@ function refresh() {
   renderActivityList(dataset);
   renderLogHistory();
   refreshKPIs(dataset);
+  renderTodayCard();
 }
 
 // ===========================
@@ -381,6 +450,29 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ===========================
+// SECTION NAV
+// ===========================
+var SECTIONS = ['today', 'trends', 'plan', 'race', 'log'];
+
+function showSection(name) {
+  SECTIONS.forEach(function(s) {
+    var panel = document.getElementById('section-' + s);
+    var btn   = document.getElementById('nav-' + s);
+    if (panel) panel.className = 'section-panel' + (s === name ? ' active' : '');
+    if (btn)   btn.className   = 'nav-btn'        + (s === name ? ' active' : '');
+  });
+  // Re-render charts when Trends tab becomes visible (they need visible canvas)
+  if (name === 'trends') {
+    var dataset = buildDataset();
+    renderCharts(dataset);
+  }
+  // Scroll to top of container
+  var container = document.querySelector('.container');
+  if (container) container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  try { localStorage.setItem('activeSection', name); } catch(e) {}
 }
 
 // ===========================
@@ -438,3 +530,389 @@ if ('serviceWorker' in navigator) {
 // INIT
 // ===========================
 refresh();
+// Restore last active tab (default: today)
+try {
+  var savedSection = localStorage.getItem('activeSection') || 'today';
+  if (SECTIONS.indexOf(savedSection) >= 0) showSection(savedSection);
+} catch(e) { showSection('today'); }
+
+// ===========================
+// AI COACH CHATBOT
+// ===========================
+var chatOpen = false;
+var chatHistory = [];
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  var panel = document.getElementById('chatPanel');
+  if (panel) panel.classList.toggle('open', chatOpen);
+  if (chatOpen && chatHistory.length === 0) {
+    setTimeout(function() { chatBotGreet(); }, 300);
+  }
+  if (chatOpen) {
+    setTimeout(function() {
+      var inp = document.getElementById('chatInput');
+      if (inp) inp.focus();
+    }, 400);
+  }
+}
+
+function chatBotGreet() {
+  var dataset = buildDataset();
+  var daysToRace = Math.ceil((new Date('2026-10-04') - new Date()) / 86400000);
+  var latest = dataset.filter(function(d) { return d.recovery != null; }).slice(-1)[0];
+  var rec = latest ? latest.recovery : null;
+  var recText = rec ? (rec >= 67 ? '🟢 ' + rec + '% — green zone' : rec >= 34 ? '🟡 ' + rec + '% — yellow zone' : '🔴 ' + rec + '% — red zone') : 'not logged yet';
+
+  chatAddMessage('bot',
+    "Hey Sri! 👋 I'm your AI Coach — I know all your Whoop data.\n\n" +
+    "Quick snapshot:\n" +
+    "• Latest recovery: " + recText + "\n" +
+    "• Days to Ironman Maryland: " + daysToRace + " days\n" +
+    "• Current phase: Phase 1 — Base 🏗️\n\n" +
+    "Ask me anything about your training, or tap a quick question below."
+  );
+}
+
+function chatSend() {
+  var inp = document.getElementById('chatInput');
+  if (!inp || !inp.value.trim()) return;
+  var q = inp.value.trim();
+  inp.value = '';
+  chatAsk(q);
+}
+
+function chatAsk(question) {
+  chatAddMessage('user', question);
+  // Show typing indicator
+  var typingId = chatAddTyping();
+  setTimeout(function() {
+    removeTyping(typingId);
+    var answer = chatRespond(question);
+    chatAddMessage('bot', answer);
+  }, 600 + Math.random() * 400);
+  // Make sure panel is open
+  if (!chatOpen) toggleChat();
+}
+
+function chatAddMessage(role, text) {
+  var msgs = document.getElementById('chatMessages');
+  if (!msgs) return;
+  var div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  var avatarHtml = role === 'bot'
+    ? '<div class="chat-msg-avatar">🏊</div>'
+    : '';
+  // Convert \n to <br>
+  var formatted = text.replace(/\n/g, '<br>');
+  div.innerHTML = avatarHtml + '<div class="chat-bubble">' + formatted + '</div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  chatHistory.push({ role: role, text: text });
+}
+
+function chatAddTyping() {
+  var msgs = document.getElementById('chatMessages');
+  if (!msgs) return null;
+  var id = 'typing-' + Date.now();
+  var div = document.createElement('div');
+  div.className = 'chat-msg bot';
+  div.id = id;
+  div.innerHTML = '<div class="chat-msg-avatar">🏊</div><div class="chat-bubble"><div class="chat-typing"><span></span><span></span><span></span></div></div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return id;
+}
+
+function removeTyping(id) {
+  if (!id) return;
+  var el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+// ── Response Engine ───────────────────────────────────────────────────────────
+function chatRespond(q) {
+  var ql = q.toLowerCase();
+  var dataset = buildDataset();
+
+  if (matchAny(ql, ['ready','train today','readiness','should i train','can i train'])) {
+    return answerReadiness(dataset);
+  }
+  if (matchAny(ql, ['sleep','rest','tired','fatigue'])) {
+    return answerSleep(dataset);
+  }
+  if (matchAny(ql, ['hrv','heart rate variability'])) {
+    return answerHRV(dataset);
+  }
+  if (matchAny(ql, ['race','days to','countdown','maryland','ironman'])) {
+    return answerRace();
+  }
+  if (matchAny(ql, ['best session','top session','best workout','personal best','pr'])) {
+    return answerBestSessions(dataset);
+  }
+  if (matchAny(ql, ['gap','weak','missing','behind','behind on'])) {
+    return answerGaps(dataset);
+  }
+  if (matchAny(ql, ['week','this week','weekly','summary'])) {
+    return answerWeeklySummary(dataset);
+  }
+  if (matchAny(ql, ['swim','swimming','pool'])) {
+    return answerSport(dataset, 'swim');
+  }
+  if (matchAny(ql, ['bike','cycling','cycle','ride'])) {
+    return answerSport(dataset, 'bike');
+  }
+  if (matchAny(ql, ['run','running','jog'])) {
+    return answerSport(dataset, 'run');
+  }
+  if (matchAny(ql, ['recovery','recover','feel'])) {
+    return answerRecovery(dataset);
+  }
+  if (matchAny(ql, ['strain','effort','intensity'])) {
+    return answerStrain(dataset);
+  }
+  if (matchAny(ql, ['phase','plan','schedule','program'])) {
+    return answerPhase();
+  }
+  if (matchAny(ql, ['calorie','fuel','nutrition','eat'])) {
+    return answerNutrition(dataset);
+  }
+  if (matchAny(ql, ['hello','hi','hey','good morning','what can you'])) {
+    return "Hey! I can answer questions about your training data. Try asking:\n• \"Am I ready to train today?\"\n• \"How's my HRV trending?\"\n• \"What's my biggest gap?\"\n• \"Show my best sessions\"";
+  }
+  return answerFallback(ql, dataset);
+}
+
+function matchAny(str, keywords) {
+  return keywords.some(function(k) { return str.includes(k); });
+}
+
+// ── Individual Answer Functions ───────────────────────────────────────────────
+function answerReadiness(dataset) {
+  var latest = getLatestEntry(dataset);
+  if (!latest || !latest.recovery) {
+    return "I don't have today's recovery data yet — tap 📝 Log Today to enter your Whoop numbers and I'll give you a precise readiness score.";
+  }
+  var rec = latest.recovery; var hrv = latest.hrv; var rhr = latest.rhr;
+  var recLabel = rec >= 67 ? '🟢 Green' : rec >= 34 ? '🟡 Yellow' : '🔴 Red';
+  var advice = rec >= 67
+    ? "You're fully ready — schedule your hardest planned session. Don't waste a green day!"
+    : rec >= 34
+    ? "Moderate readiness. Train as planned but pull back if RPE feels harder than usual. Skip any high-intensity extras."
+    : "Red zone — your body needs recovery today. Switch to a 30-min easy swim or yoga. Hard training on red will dig you into a hole.";
+
+  return "Readiness check for " + latest.date + ":\n\n" +
+    "• Recovery: " + recLabel + " — " + rec + "%\n" +
+    (hrv ? "• HRV: " + hrv + " ms (baseline: 34 ms)\n" : "") +
+    (rhr ? "• Resting HR: " + rhr + " bpm\n" : "") +
+    "\n🧑‍🏫 Coach says: " + advice;
+}
+
+function answerSleep(dataset) {
+  var recent = dataset.filter(function(d) { return d.sleep_dur && d.sleep_need; }).slice(-7);
+  if (!recent.length) return "No sleep data available yet. Log your Whoop data to get sleep analysis.";
+  var avgGot  = recent.reduce(function(s,d) { return s + d.sleep_dur; }, 0) / recent.length / 60;
+  var avgNeed = recent.reduce(function(s,d) { return s + d.sleep_need; }, 0) / recent.length / 60;
+  var deficit = avgNeed - avgGot;
+  var trend = deficit > 2 ? "⚠️ Chronic sleep debt is your #1 performance limiter right now." : "Sleep debt is manageable — keep pushing for consistency.";
+  return "Sleep analysis — last " + recent.length + " days:\n\n" +
+    "• Avg got: " + avgGot.toFixed(1) + " hrs\n" +
+    "• Avg needed: " + avgNeed.toFixed(1) + " hrs\n" +
+    "• Daily deficit: " + deficit.toFixed(1) + " hrs\n\n" +
+    trend + "\n\n🧑‍🏫 Coach: Set a 9:30pm bedtime alarm — not for waking up, for going to bed. Sleep is when your body adapts to training load.";
+}
+
+function answerHRV(dataset) {
+  var withHRV = dataset.filter(function(d) { return d.hrv; });
+  if (!withHRV.length) return "No HRV data found yet.";
+  var avg30 = withHRV.slice(-30).reduce(function(s,d) { return s + d.hrv; }, 0) / Math.min(withHRV.length, 30);
+  var latest = withHRV.slice(-1)[0];
+  var recent7 = withHRV.slice(-7).reduce(function(s,d) { return s + d.hrv; }, 0) / Math.min(withHRV.slice(-7).length, 7);
+  var trend = recent7 > avg30 ? "📈 Trending UP — your body is adapting well." : "📉 Trending DOWN — consider a recovery day or more sleep.";
+  return "HRV analysis:\n\n" +
+    "• Latest: " + latest.hrv + " ms\n" +
+    "• 7-day avg: " + recent7.toFixed(0) + " ms\n" +
+    "• 30-day baseline: " + avg30.toFixed(0) + " ms\n" +
+    "• " + trend + "\n\n" +
+    "🧑‍🏫 Target: Reach 40+ ms by race day through better sleep and consistent Z2 training.";
+}
+
+function answerRace() {
+  var raceDate = new Date('2026-10-04');
+  var now = new Date(); now.setHours(0,0,0,0);
+  var days = Math.ceil((raceDate - now) / 86400000);
+  var weeks = Math.floor(days / 7);
+  var phase = days > 111 ? '1 — Base 🏗️' : days > 69 ? '2 — Build 💪' : days > 27 ? '3 — Peak 🔥' : '4 — Taper ⬇️';
+  return "⏱️ Race countdown:\n\n" +
+    "• " + days + " days to Ironman Maryland\n" +
+    "• " + weeks + " full weeks remaining\n" +
+    "• Current: Phase " + phase + "\n\n" +
+    "Race date: Oct 4, 2026 · Cambridge, MD\n" +
+    "3.86km swim → 180km bike → 42.2km run\n\n" +
+    "🧑‍🏫 Every session you do now compounds. The athletes who race well in October are built in June and July.";
+}
+
+function answerBestSessions(dataset) {
+  var workouts = [];
+  dataset.forEach(function(d) {
+    (d.workouts || []).forEach(function(w) {
+      if (w.strain) workouts.push(Object.assign({}, w, { date: d.date, recovery: d.recovery }));
+    });
+  });
+  if (!workouts.length) return "No workout sessions found yet.";
+  workouts.sort(function(a,b) { return b.strain - a.strain; });
+  var top3 = workouts.slice(0, 3);
+  var lines = top3.map(function(w, i) {
+    return (i+1) + ". " + w.date + " · " + w.activity + " · Strain " + (+w.strain).toFixed(1) +
+      (w.duration ? " · " + w.duration + " min" : "") +
+      (w.avg_hr ? " · " + w.avg_hr + "♥" : "");
+  });
+  var highRecovery = dataset.filter(function(d) { return d.recovery >= 80; });
+  return "🏆 Top 3 hardest sessions:\n\n" + lines.join("\n") +
+    "\n\n• Best recovery day: " + (highRecovery.length ? highRecovery.sort(function(a,b){return b.recovery-a.recovery;})[0].date + " — " + highRecovery[0].recovery + "%" : "none yet") +
+    "\n\n🧑‍🏫 High strain on high recovery = peak adaptation. That's the formula.";
+}
+
+function answerGaps(dataset) {
+  var workouts = [];
+  dataset.forEach(function(d) { (d.workouts || []).forEach(function(w) { workouts.push(w); }); });
+  var counts = { swim: 0, bike: 0, run: 0 };
+  var durations = { swim: 0, bike: 0, run: 0 };
+  workouts.forEach(function(w) {
+    var a = (w.activity || '').toLowerCase();
+    if (a.includes('swim')) { counts.swim++; durations.swim += w.duration || 0; }
+    else if (a.includes('cycl') || a.includes('bike') || a.includes('ride')) { counts.bike++; durations.bike += w.duration || 0; }
+    else if (a.includes('run')) { counts.run++; durations.run += w.duration || 0; }
+  });
+  var bikeKm = Math.round(durations.bike * 0.28); // ~28km/hr avg
+  var runKm  = Math.round(durations.run * 0.1);   // ~10km/hr avg
+  var biggest = counts.bike < counts.swim && counts.bike < counts.run ? 'bike' : counts.run < counts.swim ? 'run' : 'swim';
+  return "📊 Training volume breakdown:\n\n" +
+    "• 🏊 Swim: " + counts.swim + " sessions · " + durations.swim + " min total\n" +
+    "• 🚴 Bike: " + counts.bike + " sessions · ~" + bikeKm + " km\n" +
+    "• 🏃 Run: " + counts.run + " sessions · ~" + runKm + " km\n\n" +
+    "⚠️ Biggest gap: " + biggest.toUpperCase() + "\n\n" +
+    "🧑‍🏫 For Ironman, bike is most athletes' limiter. Target: 3 bike sessions/week by Phase 2.";
+}
+
+function answerWeeklySummary(dataset) {
+  var weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+  var weekStr = weekAgo.toISOString().split('T')[0];
+  var week = dataset.filter(function(d) { return d.date >= weekStr; });
+  var workouts = [];
+  week.forEach(function(d) { (d.workouts || []).forEach(function(w) { workouts.push(w); }); });
+  var avgRec = week.filter(function(d){return d.recovery;}).reduce(function(s,d){return s+d.recovery;},0) /
+               (week.filter(function(d){return d.recovery;}).length || 1);
+  var totalStrain = week.reduce(function(s,d){return s+(d.strain||0);},0);
+  return "📅 This week's summary:\n\n" +
+    "• Sessions: " + workouts.length + "\n" +
+    "• Avg recovery: " + (avgRec ? avgRec.toFixed(0) + "%" : "—") + "\n" +
+    "• Total strain: " + totalStrain.toFixed(1) + "\n" +
+    "• Days with data: " + week.length + "\n\n" +
+    "🧑‍🏫 Phase 1 target: 5 sessions/week, strain 10–13/session. Log your data daily for better coaching.";
+}
+
+function answerSport(dataset, sport) {
+  var workouts = [];
+  dataset.forEach(function(d) { (d.workouts || []).forEach(function(w) { workouts.push(Object.assign({}, w, {date:d.date})); }); });
+  var filtered = workouts.filter(function(w) {
+    var a = (w.activity || '').toLowerCase();
+    if (sport === 'swim') return a.includes('swim');
+    if (sport === 'bike') return a.includes('cycl') || a.includes('bike');
+    if (sport === 'run')  return a.includes('run');
+    return false;
+  });
+  if (!filtered.length) return "No " + sport + " sessions found yet.";
+  var totalMin = filtered.reduce(function(s,w){return s+(w.duration||0);},0);
+  var avgStrain = filtered.reduce(function(s,w){return s+(+w.strain||0);},0) / filtered.length;
+  var icons = { swim:'🏊', bike:'🚴', run:'🏃' };
+  var targets = {
+    swim: "Target: 3×/week, build to 3,800m per session by Phase 3",
+    bike: "Target: 3×/week, build to 160km long ride by Phase 3. This is your biggest gap.",
+    run:  "Target: 3×/week, keep all easy runs in Z2 (under 145 bpm)"
+  };
+  return icons[sport] + " " + sport.charAt(0).toUpperCase()+sport.slice(1) + " breakdown:\n\n" +
+    "• Sessions: " + filtered.length + "\n" +
+    "• Total time: " + totalMin + " min (" + (totalMin/60).toFixed(1) + " hrs)\n" +
+    "• Avg session: " + Math.round(totalMin/filtered.length) + " min\n" +
+    "• Avg strain: " + avgStrain.toFixed(1) + "\n" +
+    "• Last session: " + filtered.slice(-1)[0].date + "\n\n" +
+    "🧑‍🏫 " + targets[sport];
+}
+
+function answerRecovery(dataset) {
+  var withRec = dataset.filter(function(d){return d.recovery;});
+  if (!withRec.length) return "No recovery data yet.";
+  var avg = withRec.reduce(function(s,d){return s+d.recovery;},0)/withRec.length;
+  var green = withRec.filter(function(d){return d.recovery>=67;}).length;
+  var yellow = withRec.filter(function(d){return d.recovery>=34&&d.recovery<67;}).length;
+  var red = withRec.filter(function(d){return d.recovery<34;}).length;
+  var latest = withRec.slice(-1)[0];
+  return "💚 Recovery overview (" + withRec.length + " days):\n\n" +
+    "• Latest: " + latest.recovery + "% (" + latest.date + ")\n" +
+    "• Average: " + avg.toFixed(0) + "%\n" +
+    "• 🟢 Green days: " + green + " (" + Math.round(green/withRec.length*100) + "%)\n" +
+    "• 🟡 Yellow days: " + yellow + "\n" +
+    "• 🔴 Red days: " + red + "\n\n" +
+    "🧑‍🏫 Goal: Push average above 65% through better sleep and managed training stress.";
+}
+
+function answerStrain(dataset) {
+  var recent = dataset.filter(function(d){return d.strain;}).slice(-14);
+  if (!recent.length) return "No strain data yet.";
+  var avg = recent.reduce(function(s,d){return s+d.strain;},0)/recent.length;
+  var max = Math.max.apply(null, recent.map(function(d){return d.strain;}));
+  return "🔥 Strain (last 14 days):\n\n" +
+    "• Avg daily strain: " + avg.toFixed(1) + "\n" +
+    "• Peak strain: " + max.toFixed(1) + "\n\n" +
+    "Phase 1 target range: 10–13/session\n\n" +
+    "🧑‍🏫 Strain above 16 on back-to-back days without 80%+ recovery = overtraining risk. Monitor closely.";
+}
+
+function answerPhase() {
+  var days = Math.ceil((new Date('2026-10-04') - new Date()) / 86400000);
+  var phase = days > 111 ? 1 : days > 69 ? 2 : days > 27 ? 3 : 4;
+  var phaseInfo = [
+    null,
+    { name:'Base', dates:'Jun 6 – Jul 3', goal:'Build aerobic engine. Z2 only. Establish bike routine.', strain:'10–13' },
+    { name:'Build', dates:'Jul 4 – Aug 14', goal:'Extend bike to 120km, add bricks, introduce HIIT.', strain:'13–16' },
+    { name:'Peak', dates:'Aug 15 – Sep 11', goal:'Race simulation, 160km bike, 30km run. Peak volume.', strain:'15–18' },
+    { name:'Taper', dates:'Sep 12 – Oct 4', goal:'Reduce volume 40–60%. Preserve fitness. Trust training.', strain:'7–12' }
+  ];
+  var p = phaseInfo[phase];
+  return "📅 Current training phase:\n\n" +
+    "Phase " + phase + " — " + p.name + "\n" +
+    "📆 " + p.dates + "\n\n" +
+    "Goal: " + p.goal + "\n" +
+    "Strain target: " + p.strain + "/session\n\n" +
+    "🧑‍🏫 Tap the 📅 Plan tab for full week-by-week sessions.";
+}
+
+function answerNutrition(dataset) {
+  var cals = dataset.filter(function(d){return d.calories;}).slice(-7);
+  var avg = cals.length ? cals.reduce(function(s,d){return s+d.calories;},0)/cals.length : 0;
+  return "🥤 Nutrition snapshot:\n\n" +
+    (avg ? "• Avg daily calories: " + avg.toFixed(0) + " cal (last 7 days)\n\n" : "") +
+    "Race day fuelling targets:\n" +
+    "• Bike: 60–80g carbs/hr\n" +
+    "• Run: 40–60g carbs/hr\n" +
+    "• Hydration: 500–750ml/hr\n\n" +
+    "🧑‍🏫 Start practicing race nutrition NOW on your long bike sessions. Your gut needs training too — GI issues are the #1 DNF cause in Ironman.";
+}
+
+function answerFallback(q, dataset) {
+  var days = Math.ceil((new Date('2026-10-04') - new Date()) / 86400000);
+  var latest = getLatestEntry(dataset);
+  return "I'm not sure about that specific question. Here's what I can tell you:\n\n" +
+    "• " + days + " days to race day\n" +
+    (latest && latest.recovery ? "• Latest recovery: " + latest.recovery + "%\n" : "") +
+    "\nTry asking:\n" +
+    "• \"Am I ready to train today?\"\n" +
+    "• \"How's my sleep?\"\n" +
+    "• \"What's my biggest gap?\"\n" +
+    "• \"How's my HRV trending?\"";
+}
+
+function getLatestEntry(dataset) {
+  return dataset.filter(function(d){return d.recovery != null;}).sort(function(a,b){return b.date.localeCompare(a.date);})[0];
+}

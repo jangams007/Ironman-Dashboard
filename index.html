@@ -495,19 +495,8 @@
 <div class="container">
 
   <div class="section-panel active" id="section-today">
-<!-- LATEST ACTIVITY ALERT -->
-  <div class="tip-banner" style="border-color:rgba(63,185,80,0.4); background:rgba(63,185,80,0.08);">
-    <div style="font-size:18px; flex-shrink:0;">🟢</div>
-    <p><strong>Week 1 Update (Jun 6–7):</strong> Sat — Strength 66 min, Strain 13, Recovery 63%. Sun — First Long Ride 27km, 116 min, Strain 16.6, Recovery 87% ↑, HRV 40ms ↑ (above baseline!). Great start — recovery bounced back strongly after the ride. <strong>Coach flag:</strong> Avg HR 147 on ride is top of Z2 — aim for 120–140 on next Saturday's ride.</p>
-  </div>
-  <div class="alert-banner">
-    <div class="icon">⚠️</div>
-    <p><strong>Sleep Deficit Ongoing:</strong> Saturday 5.7 hrs · Sunday 6.5 hrs — still well below your 9.3–9.8 hr need. Despite strong recovery scores, chronic sleep debt will blunt adaptation as training volume increases in Phase 2. Target 8.5 hrs minimum this week.</p>
-  </div>
-  <div class="tip-banner">
-    <div style="font-size:18px; flex-shrink:0;">💡</div>
-    <p><strong>Coach's Read:</strong> Strong swim base (3×/week, avg 56 min). First long ride done ✅ — 27km is a solid Week 1 start. Build to 60km by Week 3. Your HRV at 40ms today is your best reading in 30 days — capitalise with a strong swim session Monday. Cycling remains your biggest volume gap.</p>
-  </div>
+<!-- DYNAMIC ALERTS - rendered by renderAlerts() in app.js -->
+  <div id="alertsContainer"></div>
 
   <!-- KPI CARDS -->
   <div class="kpi-grid">

@@ -437,6 +437,102 @@ function renderTodayCard() {
 // ===========================
 // REFRESH ALL
 // ===========================
+function renderAlerts(dataset) {
+  var el = document.getElementById('alertsContainer');
+  if (!el) return;
+
+  // Last 7 days with data
+  var last7 = dataset.slice(-7);
+  var withRecovery = last7.filter(function(d){ return d.recovery != null; });
+  var withSleep = last7.filter(function(d){ return d.sleep_dur != null; });
+
+  // Stats
+  var avgRecovery = withRecovery.length ? Math.round(withRecovery.reduce(function(s,d){return s+d.recovery;},0)/withRecovery.length) : null;
+  var avgHRV = withRecovery.length ? Math.round(withRecovery.reduce(function(s,d){return s+d.hrv;},0)/withRecovery.length) : null;
+  var avgSleep = withSleep.length ? (withSleep.reduce(function(s,d){return s+d.sleep_dur;},0)/withSleep.length/60).toFixed(1) : null;
+  var bestDay = withRecovery.length ? withRecovery.reduce(function(a,b){return a.recovery>b.recovery?a:b;}) : null;
+  var worstDay = withRecovery.length ? withRecovery.reduce(function(a,b){return a.recovery<b.recovery?a:b;}) : null;
+
+  // Count activities by type
+  var actCount = {}; var totalWorkouts = 0;
+  last7.forEach(function(d){
+    (d.workouts||[]).forEach(function(w){
+      var key = w.activity || 'Other';
+      actCount[key] = (actCount[key]||0) + 1;
+      totalWorkouts++;
+    });
+  });
+
+  // HRV trend (first vs last)
+  var hrvFirst = withRecovery.length ? withRecovery[0].hrv : null;
+  var hrvLast = withRecovery.length ? withRecovery[withRecovery.length-1].hrv : null;
+  var hrvTrend = (hrvFirst && hrvLast) ? (hrvLast > hrvFirst ? '↑' : hrvLast < hrvFirst ? '↓' : '→') : '';
+
+  // Date range label
+  var dateFrom = last7[0] ? last7[0].date.slice(5).replace('-','/') : '';
+  var dateTo = last7[last7.length-1] ? last7[last7.length-1].date.slice(5).replace('-','/') : '';
+
+  // Low recovery flag
+  var lowRecoveryDays = withRecovery.filter(function(d){return d.recovery < 33;});
+  var weekIcon = (worstDay && worstDay.recovery < 33) ? '🟡' : '🟢';
+  var weekColor = (worstDay && worstDay.recovery < 33) ? 'rgba(210,153,34,0.4)' : 'rgba(63,185,80,0.4)';
+  var weekBg = (worstDay && worstDay.recovery < 33) ? 'rgba(210,153,34,0.08)' : 'rgba(63,185,80,0.08)';
+
+  // Build activity summary
+  var actSummary = Object.keys(actCount).map(function(k){ return actCount[k]+'× '+k; }).join(', ') || 'Rest week';
+
+  // Coach flag based on worst day
+  var coachFlag = '';
+  if (worstDay && worstDay.recovery < 33) {
+    coachFlag = ' <strong>Coach flag:</strong> Recovery crashed to ' + worstDay.recovery + '% on ' + worstDay.date.slice(5) + ' — likely sleep debt. Protect sleep above all else this week.';
+  } else if (bestDay && bestDay.hrv > 40) {
+    coachFlag = ' <strong>Coach flag:</strong> HRV peaked at ' + bestDay.hrv + 'ms on ' + bestDay.date.slice(5) + ' — great window for a quality session. Capitalise on green days.';
+  }
+
+  // Sleep alert
+  var sleepDeficit = avgSleep && parseFloat(avgSleep) < 7.5;
+  var sleepMsg = avgSleep
+    ? 'Avg sleep this week: <strong>' + avgSleep + ' hrs</strong> — ' + (sleepDeficit ? 'below your 8.5hr target. Sleep debt compounds across training weeks and will blunt adaptation in Phase 2. Prioritise 8+ hrs tonight.' : 'on track. Keep protecting sleep as load increases.')
+    : 'No sleep data this week.';
+
+  // Gaps
+  var hasCycling = actCount['Cycling'] > 0;
+  var hasRun = actCount['Running'] > 0;
+  var gaps = [];
+  if (!hasCycling) gaps.push('cycling');
+  if (!hasRun) gaps.push('running');
+
+  // Coach's read
+  var coachRead = '';
+  if (avgRecovery !== null) {
+    coachRead += 'Avg recovery ' + avgRecovery + '% · HRV ' + avgHRV + 'ms ' + hrvTrend + ' · ' + totalWorkouts + ' sessions completed (' + actSummary + '). ';
+  }
+  if (gaps.length) {
+    coachRead += 'Missing this week: <strong>' + gaps.join(' & ') + '</strong> — address in next 7 days. ';
+  }
+  if (lowRecoveryDays.length) {
+    coachRead += 'Red flag: ' + lowRecoveryDays.length + ' day(s) below 33% recovery — body signalling overreach or sleep debt. ';
+  }
+  coachRead += 'Race day is ' + Math.ceil((new Date('2026-10-04') - new Date()) / 86400000) + ' days away — every training block counts.';
+
+  el.innerHTML =
+    '<div class="tip-banner" style="border-color:' + weekColor + '; background:' + weekBg + ';">' +
+      '<div style="font-size:18px;flex-shrink:0;">' + weekIcon + '</div>' +
+      '<p><strong>Week Update (' + dateFrom + '–' + dateTo + '):</strong> ' + actSummary + '. ' +
+      (bestDay ? 'Best recovery: ' + bestDay.recovery + '% on ' + bestDay.date.slice(5) + '. ' : '') +
+      (worstDay && worstDay !== bestDay ? 'Lowest: ' + worstDay.recovery + '% on ' + worstDay.date.slice(5) + '.' : '') +
+      coachFlag + '</p>' +
+    '</div>' +
+    '<div class="' + (sleepDeficit ? 'alert-banner' : 'tip-banner') + '">' +
+      '<div class="icon">' + (sleepDeficit ? '⚠️' : '😴') + '</div>' +
+      '<p><strong>Sleep ' + (sleepDeficit ? 'Deficit' : 'Status') + ':</strong> ' + sleepMsg + '</p>' +
+    '</div>' +
+    '<div class="tip-banner">' +
+      '<div style="font-size:18px;flex-shrink:0;">💡</div>' +
+      '<p><strong>Coach\'s Read:</strong> ' + coachRead + '</p>' +
+    '</div>';
+}
+
 function refresh() {
   const dataset = buildDataset();
   renderCharts(dataset);
@@ -444,6 +540,7 @@ function refresh() {
   renderLogHistory();
   refreshKPIs(dataset);
   renderTodayCard();
+  renderAlerts(dataset);
 }
 
 // ===========================
@@ -820,76 +917,79 @@ function answerWeeklySummary(dataset) {
 function answerSport(dataset, sport) {
   var workouts = [];
   dataset.forEach(function(d) { (d.workouts || []).forEach(function(w) { workouts.push(Object.assign({}, w, {date:d.date})); }); });
-  var filtered = workouts.filter(function(w) {
-    var a = (w.activity || '').toLowerCase();
-    if (sport === 'swim') return a.includes('swim');
-    if (sport === 'bike') return a.includes('cycl') || a.includes('bike');
-    if (sport === 'run')  return a.includes('run');
-    return false;
-  });
-  if (!filtered.length) return "No " + sport + " sessions found yet.";
-  var totalMin = filtered.reduce(function(s,w){return s+(w.duration||0);},0);
-  var avgStrain = filtered.reduce(function(s,w){return s+(+w.strain||0);},0) / filtered.length;
-  var icons = { swim:'🏊', bike:'🚴', run:'🏃' };
-  var targets = {
-    swim: "Target: 3×/week, build to 3,800m per session by Phase 3",
-    bike: "Target: 3×/week, build to 160km long ride by Phase 3. This is your biggest gap.",
-    run:  "Target: 3×/week, keep all easy runs in Z2 (under 145 bpm)"
-  };
-  return icons[sport] + " " + sport.charAt(0).toUpperCase()+sport.slice(1) + " breakdown:\n\n" +
-    "• Sessions: " + filtered.length + "\n" +
-    "• Total time: " + totalMin + " min (" + (totalMin/60).toFixed(1) + " hrs)\n" +
-    "• Avg session: " + Math.round(totalMin/filtered.length) + " min\n" +
-    "• Avg strain: " + avgStrain.toFixed(1) + "\n" +
-    "• Last session: " + filtered.slice(-1)[0].date + "\n\n" +
-    "🧑‍🏫 " + targets[sport];
+  var filtered = workouts.filter(function(w) { return w.activity && w.activity.toLowerCase().indexOf(sport.toLowerCase()) >= 0; });
+  if (!filtered.length) return "No " + sport + " sessions found in your data yet. Time to get moving! 🏊‍♂️";
+  var totalMin = filtered.reduce(function(s,w){return s+( w.duration||0);},0);
+  var avgMin = Math.round(totalMin / filtered.length);
+  var last = filtered[filtered.length-1];
+  return "🏅 " + sport + " summary:\n\n" +
+    "• Sessions logged: " + filtered.length + "\n" +
+    "• Avg duration: " + avgMin + " min\n" +
+    "• Total time: " + Math.round(totalMin/60) + " hrs\n" +
+    "• Last session: " + (last.date||'—') + " (" + (last.duration||'?') + " min)\n\n" +
+    "🧑‍🏫 Ironman target: Swim 3×/week, Bike 3×/week, Run 3×/week. Keep stacking the volume!";
 }
 
 function answerRecovery(dataset) {
-  var withRec = dataset.filter(function(d){return d.recovery;});
-  if (!withRec.length) return "No recovery data yet.";
-  var avg = withRec.reduce(function(s,d){return s+d.recovery;},0)/withRec.length;
-  var green = withRec.filter(function(d){return d.recovery>=67;}).length;
-  var yellow = withRec.filter(function(d){return d.recovery>=34&&d.recovery<67;}).length;
-  var red = withRec.filter(function(d){return d.recovery<34;}).length;
-  var latest = withRec.slice(-1)[0];
-  return "💚 Recovery overview (" + withRec.length + " days):\n\n" +
-    "• Latest: " + latest.recovery + "% (" + latest.date + ")\n" +
-    "• Average: " + avg.toFixed(0) + "%\n" +
-    "• 🟢 Green days: " + green + " (" + Math.round(green/withRec.length*100) + "%)\n" +
-    "• 🟡 Yellow days: " + yellow + "\n" +
-    "• 🔴 Red days: " + red + "\n\n" +
-    "🧑‍🏫 Goal: Push average above 65% through better sleep and managed training stress.";
+  var withRec = dataset.filter(function(d){return d.recovery!=null;}).slice(-14);
+  if (!withRec.length) return "No recovery data found. Make sure your Whoop is syncing!";
+  var avg = Math.round(withRec.reduce(function(s,d){return s+d.recovery;},0)/withRec.length);
+  var trend = withRec.length>1 ? (withRec[withRec.length-1].recovery > withRec[0].recovery ? '↑ improving' : '↓ declining') : '—';
+  var latest = withRec[withRec.length-1];
+  return "💚 Recovery (last 14 days):\n\n" +
+    "• Latest: " + latest.recovery + "% on " + latest.date + "\n" +
+    "• 14-day avg: " + avg + "%\n" +
+    "• Trend: " + trend + "\n\n" +
+    "🧑‍🏫 Green (67–100%): train hard. Yellow (34–66%): moderate. Red (<33%): recover only. Your body talks — listen to it.";
 }
 
 function answerStrain(dataset) {
-  var recent = dataset.filter(function(d){return d.strain;}).slice(-14);
-  if (!recent.length) return "No strain data yet.";
-  var avg = recent.reduce(function(s,d){return s+d.strain;},0)/recent.length;
-  var max = Math.max.apply(null, recent.map(function(d){return d.strain;}));
-  return "🔥 Strain (last 14 days):\n\n" +
-    "• Avg daily strain: " + avg.toFixed(1) + "\n" +
-    "• Peak strain: " + max.toFixed(1) + "\n\n" +
-    "Phase 1 target range: 10–13/session\n\n" +
-    "🧑‍🏫 Strain above 16 on back-to-back days without 80%+ recovery = overtraining risk. Monitor closely.";
+  var last7 = dataset.filter(function(d){return d.strain!=null;}).slice(-7);
+  if (!last7.length) return "No strain data found yet.";
+  var avg = (last7.reduce(function(s,d){return s+d.strain;},0)/last7.length).toFixed(1);
+  var max = last7.reduce(function(a,b){return a.strain>b.strain?a:b;});
+  return "⚡ Strain (last 7 days):\n\n" +
+    "• Avg daily strain: " + avg + "\n" +
+    "• Peak: " + max.strain + " on " + max.date + "\n\n" +
+    "🧑‍🏫 Phase 1 target is 10–13/session. Above 15 = high load — ensure recovery follows. Below 8 = too easy for Ironman prep.";
 }
 
-function answerPhase() {
+function answerPhase(dataset) {
   var days = Math.ceil((new Date('2026-10-04') - new Date()) / 86400000);
-  var phase = days > 111 ? 1 : days > 69 ? 2 : days > 27 ? 3 : 4;
-  var phaseInfo = [
-    null,
-    { name:'Base', dates:'Jun 6 – Jul 3', goal:'Build aerobic engine. Z2 only. Establish bike routine.', strain:'10–13' },
-    { name:'Build', dates:'Jul 4 – Aug 14', goal:'Extend bike to 120km, add bricks, introduce HIIT.', strain:'13–16' },
-    { name:'Peak', dates:'Aug 15 – Sep 11', goal:'Race simulation, 160km bike, 30km run. Peak volume.', strain:'15–18' },
-    { name:'Taper', dates:'Sep 12 – Oct 4', goal:'Reduce volume 40–60%. Preserve fitness. Trust training.', strain:'7–12' }
-  ];
-  var p = phaseInfo[phase];
-  return "📅 Current training phase:\n\n" +
-    "Phase " + phase + " — " + p.name + "\n" +
+  var p = getPhase(days);
+  return "📅 Training phase:\n\n" +
+    "📌 " + p.name + "\n" +
     "📆 " + p.dates + "\n\n" +
     "Goal: " + p.goal + "\n" +
     "Strain target: " + p.strain + "/session\n\n" +
+    "🧑‍🏫 Tap the 📅 Plan tab for full week-by-week sessions.";
+}
+
+function answerNutrition(dataset) {
+  var cals = dataset.filter(function(d){return d.calories;}).slice(-7);
+  var avg = cals.length ? cals.reduce(function(s,d){return s+d.calories;},0)/cals.length : 0;
+  return "🥤 Nutrition snapshot:\n\n" +
+    (avg ? "• Avg daily calories: " + avg.toFixed(0) + " cal (last 7 days)\n\n" : "") +
+    "Race day fuelling targets:\n" +
+    "• Bike: 60–80g carbs/hr\n" +
+    "• Run: 40–60g carbs/hr\n" +
+    "• Hydration: 500–750ml/hr\n\n" +
+    "🧑‍🏫 Start practicing race nutrition NOW on your long bike sessions. Your gut needs training too — GI issues are the #1 DNF cause in Ironman.";
+}
+
+function answerFallback(q, dataset) {
+  var days = Math.ceil((new Date('2026-10-04') - new Date()) / 86400000);
+  var latest = getLatestEntry(dataset);
+  return "I'm not sure about that specific question. Here's what I can tell you:\n\n" +
+    "• " + days + " days to race day\n" +
+    (latest && latest.recovery ? "• Latest recovery: " + latest.recovery + "%\n" : "") +
+    "\nTry asking:\n" +
+    "• \"Am I ready to train today?\"\n" +
+    "• \"How's my sleep?\"\n" +
+    "• \"What's my biggest gap?\"\n" +
+    "• \"How's my HRV trending?\"";
+}
+ssion\n\n" +
     "🧑‍🏫 Tap the 📅 Plan tab for full week-by-week sessions.";
 }
 
